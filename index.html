@@ -5043,12 +5043,20 @@
   /* ========================================================================
      第一部分：配置常量
      ======================================================================== */
+  function resolveApiBase() {
+    if (window.EXAM_ANALYZER_API_BASE) {
+      return window.EXAM_ANALYZER_API_BASE;
+    }
+
+    if (location.hostname.endsWith('github.io')) {
+      return 'https://exam-analyzer-worker.edu-qingxue.workers.dev';
+    }
+
+    return localStorage.getItem('exam_analyzer_api_base') || 'http://127.0.0.1:8787';
+  }
+
   const CONFIG = {
-    API_BASE: window.EXAM_ANALYZER_API_BASE ||
-      localStorage.getItem('exam_analyzer_api_base') ||
-      (location.hostname.endsWith('github.io')
-        ? 'https://exam-analyzer-worker.edu-qingxue.workers.dev'
-        : 'http://127.0.0.1:8787'),
+    API_BASE: resolveApiBase(),
     STORAGE_KEY: 'exam_analyzer_data',   // localStorage 存储键名
     API_TIMEOUT: 180000,                 // API 超时时间（毫秒）
   };
