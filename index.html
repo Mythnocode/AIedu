@@ -1153,6 +1153,64 @@
       gap: 10px;
     }
 
+    /* ===== 拍张照搜索卡片 ===== */
+    .photo-search-card {
+      margin-top: 16px;
+      margin-bottom: 4px;
+    }
+    .photo-search-card-inner {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 18px 20px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(37,99,235,0.08), rgba(6,182,212,0.08));
+      border: 1px solid rgba(37,99,235,0.15);
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+    .photo-search-card-inner:hover {
+      border-color: var(--color-primary);
+      box-shadow: 0 4px 16px rgba(37,99,235,0.12);
+      transform: translateY(-1px);
+    }
+    .photo-search-card-icon {
+      flex-shrink: 0;
+      width: 52px;
+      height: 52px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #2563EB, #06B6D4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .photo-search-card-icon svg {
+      width: 28px;
+      height: 28px;
+      fill: none;
+      stroke: white;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .photo-search-card-text {
+      flex: 1;
+    }
+    .photo-search-card-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--color-text-title);
+      margin-bottom: 2px;
+    }
+    .photo-search-card-desc {
+      font-size: 13px;
+      color: var(--color-text-muted);
+    }
+    .photo-search-card-arrow {
+      flex-shrink: 0;
+      color: var(--color-primary);
+    }
+
     .upload-mode-btn {
       display: flex;
       align-items: center;
@@ -3062,6 +3120,7 @@
       gap: 12px;
       justify-content: center;
       margin-top: 16px;
+      flex-wrap: wrap;
     }
 
     /* ---- 双模式输入区（上传+拍照） ---- */
@@ -4104,9 +4163,9 @@
        主内容区
        ================================================================ -->
   <main class="main">
-    <!-- 演示模式横幅 -->
-    <div class="demo-banner" id="demoBanner">
-      <svg viewBox="0 0 16 16" style="width:16px;height:16px;vertical-align:middle;margin-right:6px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;"><circle cx="8" cy="8" r="6"/><path d="M8 5 L8 8 L10.5 10.5"/></svg>演示模式 — 当前使用内置模拟数据（30道题目），所有功能均可体验。启动 Worker 后端并登录后可上传真实试卷。
+    <!-- 演示模式横幅（已停用） -->
+    <div class="demo-banner" id="demoBanner" style="display:none;">
+      演示模式已停用
     </div>
 
     <!-- ====================== 首页视图 ====================== -->
@@ -4178,7 +4237,7 @@
             </div>
           </div>
           <!-- 错题集 -->
-          <div class="home-bubble home-bubble--orange" onclick="switchView('search')">
+          <div class="home-bubble home-bubble--orange" onclick="openErrorSummary()">
             <div class="home-bubble-icon">
               <svg viewBox="0 0 24 24">
                 <path d="M12 3 L12 14"/>
@@ -4400,6 +4459,28 @@
               <svg viewBox="0 0 20 20"><path d="M4 5 Q4 4 5 4 L15 4 Q16 4 16 5 L16 15 Q16 16 15 16 L5 16 Q4 16 4 15 Z"/><circle cx="8" cy="8" r="1.5"/><path d="M5 14 L9 10 L12 13 L14 11 L16 13"/></svg>
               多模态模型
             </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== 拍张照搜索功能卡片 ===== -->
+      <div class="photo-search-card" id="photoSearchCard">
+        <div class="photo-search-card-inner" onclick="openPhotoSearchCamera()">
+          <div class="photo-search-card-icon">
+            <svg viewBox="0 0 24 24">
+              <rect x="3" y="6" width="18" height="14" rx="2"/>
+              <circle cx="12" cy="13" r="4"/>
+              <rect x="9" y="3" width="6" height="3" rx="1"/>
+              <circle cx="12" cy="13" r="1.5"/>
+              <path d="M16 3 L18 3 L18 5" style="fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;"/>
+            </svg>
+          </div>
+          <div class="photo-search-card-text">
+            <div class="photo-search-card-title">拍张照搜索</div>
+            <div class="photo-search-card-desc">开启摄像头拍题，AI即刻识别解答</div>
+          </div>
+          <div class="photo-search-card-arrow">
+            <svg viewBox="0 0 20 20" style="width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><polyline points="8 5 13 10 8 15"/></svg>
           </div>
         </div>
       </div>
@@ -5013,6 +5094,10 @@
             <svg viewBox="0 0 20 20" style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><rect x="3" y="4" width="14" height="10" rx="1"/><circle cx="10" cy="9" r="2.5"/><line x1="7" y1="17" x2="13" y2="17"/></svg>
             开启摄像头
           </button>
+          <button class="feat-btn feat-btn--ghost" id="cameraPickerFlipBtn" onclick="flipCameraPicker()" style="display:none;">
+            <svg viewBox="0 0 20 20" style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><path d="M3 10 Q3 4 10 4 Q14 4 16 7"/><path d="M14 4 L16 7 L13 7"/><path d="M17 10 Q17 16 10 16 Q6 16 4 13"/><path d="M6 16 L4 13 L7 13"/></svg>
+            翻转
+          </button>
           <button class="feat-btn feat-btn--primary" id="cameraPickerCaptureBtn" onclick="captureCameraPicker()" style="display:none;">
             <svg viewBox="0 0 20 20" style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><circle cx="10" cy="10" r="6"/><circle cx="10" cy="10" r="2.5" fill="currentColor"/></svg>
             拍照
@@ -5095,103 +5180,8 @@
      涵盖选择题10道、填空题10道、解答题10道
      每道题包含：id, type, knowledgePoints, difficulty, score, scoreRate, question, answer
      ======================================================================== */
-  const DEMO_QUESTIONS = [
-    // ========== 选择题（10道）==========
-    { id: 1, type: '选择题', knowledgePoints: ['勾股定理'], difficulty: '简单', score: 5, scoreRate: 85,
-      question: '在Rt△ABC中，∠C=90°，AC=3，BC=4，则AB的长为多少？',
-      answer: 'A. 5\n解析：根据勾股定理，AB=√(AC²+BC²)=√(9+16)=√25=5' },
-    { id: 2, type: '选择题', knowledgePoints: ['勾股定理'], difficulty: '中等', score: 5, scoreRate: 72,
-      question: '已知直角三角形的两边长分别为6和8，则第三边的长可能是多少？',
-      answer: 'C. 10或2√7\n解析：分两种情况讨论：8为斜边或8为直角边' },
-    { id: 3, type: '选择题', knowledgePoints: ['一次函数'], difficulty: '中等', score: 5, scoreRate: 65,
-      question: '一次函数y=2x-3的图象不经过第几象限？',
-      answer: 'B. 第二象限\n解析：k=2>0经过一三象限，b=-3<0经过三四象限，故不经过第二象限' },
-    { id: 4, type: '选择题', knowledgePoints: ['一次函数'], difficulty: '困难', score: 8, scoreRate: 45,
-      question: '已知一次函数y=(2m-1)x+m+3的图象经过第一、三、四象限，则m的取值范围是？',
-      answer: 'D. -3<m<1/2\n解析：需同时满足2m-1>0且m+3<0，或2m-1>0且m+3<0' },
-    { id: 5, type: '选择题', knowledgePoints: ['数据分析'], difficulty: '简单', score: 5, scoreRate: 90,
-      question: '一组数据2, 3, 4, 5, 6的中位数和平均数分别是多少？',
-      answer: 'A. 中位数4，平均数4\n解析：中位数为中间值4，平均数为(2+3+4+5+6)/5=4' },
-    { id: 6, type: '选择题', knowledgePoints: ['数据分析'], difficulty: '中等', score: 6, scoreRate: 68,
-      question: '某班20名同学的数学成绩如下：85,92,78,85,90,76,85,88,92,85,80,85,92,78,85,90,85,88,92,85，这组数据的众数是多少？',
-      answer: 'B. 85\n解析：85出现了8次，出现次数最多' },
-    { id: 7, type: '选择题', knowledgePoints: ['方程求解'], difficulty: '简单', score: 5, scoreRate: 88,
-      question: '方程2x+3=7的解是x等于多少？',
-      answer: 'A. x=2\n解析：2x=7-3=4，x=2' },
-    { id: 8, type: '选择题', knowledgePoints: ['二次函数'], difficulty: '中等', score: 6, scoreRate: 60,
-      question: '抛物线y=x²-2x-3的顶点坐标是多少？',
-      answer: 'C. (1, -4)\n解析：y=(x-1)²-4，顶点为(1,-4)' },
-    { id: 9, type: '选择题', knowledgePoints: ['概率统计'], difficulty: '简单', score: 5, scoreRate: 82,
-      question: '掷一枚均匀骰子，出现偶数点的概率是多少？',
-      answer: 'B. 1/2\n解析：偶数点有2,4,6共3个，概率为3/6=1/2' },
-    { id: 10, type: '选择题', knowledgePoints: ['相似三角形'], difficulty: '中等', score: 5, scoreRate: 70,
-      question: '已知△ABC∽△DEF，相似比为2:3，若△ABC的面积为8，则△DEF的面积为多少？',
-      answer: 'C. 18\n解析：面积比等于相似比的平方，8×(3/2)²=18' },
-
-    // ========== 填空题（10道）==========
-    { id: 11, type: '填空题', knowledgePoints: ['方程求解'], difficulty: '简单', score: 4, scoreRate: 90,
-      question: '方程x²-5x+6=0的两个根分别是x₁=___和x₂=___。',
-      answer: 'x₁=2，x₂=3\n解析：(x-2)(x-3)=0' },
-    { id: 12, type: '填空题', knowledgePoints: ['几何证明'], difficulty: '中等', score: 4, scoreRate: 65,
-      question: '在平行四边形ABCD中，若∠A+∠C=200°，则∠B=___度。',
-      answer: '∠B=80°\n解析：平行四边形对角相等，∠A=∠C=100°，∠B=180°-100°=80°' },
-    { id: 13, type: '填空题', knowledgePoints: ['勾股定理'], difficulty: '中等', score: 4, scoreRate: 75,
-      question: '等腰直角三角形的直角边长为2，则斜边上的高为___。',
-      answer: '√2\n解析：斜边=2√2，面积=2，高=2×2/(2√2)=√2' },
-    { id: 14, type: '填空题', knowledgePoints: ['一次函数'], difficulty: '中等', score: 4, scoreRate: 60,
-      question: '若一次函数y=kx+b的图象过点(0,2)和(1,5)，则k=___，b=___。',
-      answer: 'k=3，b=2\n解析：代入两个点求方程组' },
-    { id: 15, type: '填空题', knowledgePoints: ['数据分析'], difficulty: '简单', score: 4, scoreRate: 85,
-      question: '数据1,2,3,4,5,6,7,8,9,10的极差是___。',
-      answer: '9\n解析：极差=最大值-最小值=10-1=9' },
-    { id: 16, type: '填空题', knowledgePoints: ['二次函数'], difficulty: '困难', score: 5, scoreRate: 40,
-      question: '已知二次函数y=ax²+bx+c的图象开口向下，对称轴为x=1，且过原点，若a=-1，则b=___，c=___。',
-      answer: 'b=2，c=0\n解析：对称轴x=-b/(2a)=1，b=2；过原点c=0' },
-    { id: 17, type: '填空题', knowledgePoints: ['概率统计'], difficulty: '简单', score: 4, scoreRate: 80,
-      question: '从1到10的10张卡片中随机抽取一张，抽到质数的概率是___。',
-      answer: '2/5\n解析：质数有2,3,5,7共4个，概率为4/10=2/5' },
-    { id: 18, type: '填空题', knowledgePoints: ['相似三角形'], difficulty: '中等', score: 4, scoreRate: 68,
-      question: '△ABC中，DE∥BC交AB于D，交AC于E，若AD:DB=1:2，则△ADE与△ABC的面积比为___。',
-      answer: '1:9\n解析：相似比为1:3，面积比为1:9' },
-    { id: 19, type: '填空题', knowledgePoints: ['不等式'], difficulty: '简单', score: 4, scoreRate: 88,
-      question: '不等式2x-5>3的解集是___。',
-      answer: 'x>4\n解析：2x>8，x>4' },
-    { id: 20, type: '填空题', knowledgePoints: ['三角函数'], difficulty: '中等', score: 4, scoreRate: 55,
-      question: '在Rt△ABC中，∠C=90°，若sinA=3/5，则cosA=___。',
-      answer: '4/5\n解析：sin²A+cos²A=1，cosA=√(1-9/25)=4/5' },
-
-    // ========== 解答题（10道）==========
-    { id: 21, type: '解答题', knowledgePoints: ['综合应用'], difficulty: '困难', score: 12, scoreRate: 50,
-      question: '某商店购进一批商品，进价为每件40元。如果每件定价50元，可卖出500件；如果每件定价每提高1元，销量将减少10件。（1）求销量y与定价x之间的函数关系式；（2）商店应定价多少才能使利润最大？最大利润是多少？',
-      answer: '（1）y=1000-10x（0<x≤100）\n（2）定价70元时利润最大，为9000元' },
-    { id: 22, type: '解答题', knowledgePoints: ['压轴题'], difficulty: '困难', score: 14, scoreRate: 35,
-      question: '如图，抛物线y=ax²+bx+c与x轴交于A(-1,0)、B(3,0)两点，与y轴交于C(0,3)。（1）求抛物线解析式；（2）求△ABC的面积；（3）在抛物线上是否存在点P，使S△PAB=2S△ABC？若存在，求出P点坐标。',
-      answer: '（1）y=-x²+2x+3\n（2）S△ABC=6\n（3）存在，P₁(1+2√2,-2), P₂(1-2√2,-2), P₃(1,4)' },
-    { id: 23, type: '解答题', knowledgePoints: ['勾股定理', '方程求解'], difficulty: '中等', score: 10, scoreRate: 60,
-      question: '如图，在Rt△ABC中，∠C=90°，AC=6，BC=8。点D在AB上，且CD⊥AB。（1）求AB的长；（2）求CD的长；（3）求AD的长。',
-      answer: '（1）AB=10（勾股定理）\n（2）CD=AC×BC/AB=4.8\n（3）AD=AC²/AB=3.6' },
-    { id: 24, type: '解答题', knowledgePoints: ['一次函数', '数据分析'], difficulty: '中等', score: 10, scoreRate: 55,
-      question: '某汽车销售公司1-6月汽车销量（辆）与月份x的统计数据如下：x=1,2,3,4,5,6对应y=30,35,40,45,50,55。（1）求y与x的一次函数关系式；（2）预测7月份销量；（3）计算上半年平均月销量。',
-      answer: '（1）y=5x+25\n（2）7月预测60辆\n（3）平均月销量=42.5辆' },
-    { id: 25, type: '解答题', knowledgePoints: ['二次函数'], difficulty: '困难', score: 12, scoreRate: 42,
-      question: '已知二次函数y=x²+bx+c的图象经过点(0,-3)和(2,-3)。（1）求b和c的值；（2）求该函数图象的顶点坐标和对称轴；（3）当x取何值时，y随x的增大而减小？',
-      answer: '（1）b=-2，c=-3\n（2）顶点(1,-4)，对称轴x=1\n（3）x<1时y随x增大而减小' },
-    { id: 26, type: '解答题', knowledgePoints: ['几何证明'], difficulty: '中等', score: 10, scoreRate: 58,
-      question: '如图，在平行四边形ABCD中，E、F分别是BC、AD的中点。求证：△ABE≌△CDF。',
-      answer: '证明：\n∵四边形ABCD是平行四边形\n∴AB=CD，∠B=∠D\n∵E、F分别是BC、AD的中点\n∴BE=DF\n∴△ABE≌△CDF（SAS）' },
-    { id: 27, type: '解答题', knowledgePoints: ['相似三角形', '勾股定理'], difficulty: '中等', score: 10, scoreRate: 50,
-      question: '如图，在△ABC中，DE∥BC，AD=3，DB=6，DE=2。（1）求BC的长；（2）若△ABC的面积为27，求△ADE的面积；（3）求四边形BDEC的面积。',
-      answer: '（1）BC=6（相似比1:3）\n（2）S△ADE=3\n（3）S四边形BDEC=24' },
-    { id: 28, type: '解答题', knowledgePoints: ['概率统计'], difficulty: '中等', score: 8, scoreRate: 65,
-      question: '一个不透明口袋中有3个红球和2个白球，它们除颜色外完全相同。（1）从中随机摸出一个球，摸到红球的概率是多少？（2）从中随机摸出两个球，求两个球都是红球的概率；（3）从中随机摸出两个球，求至少摸到一个红球的概率。',
-      answer: '（1）P=3/5\n（2）P=3/10\n（3）P=9/10' },
-    { id: 29, type: '解答题', knowledgePoints: ['综合应用'], difficulty: '中等', score: 10, scoreRate: 62,
-      question: '某市出租车收费标准：起步价8元（3公里以内），超过3公里部分每公里1.8元。（1）写出车费y与里程x的函数关系式；（2）若小明打车花了24.2元，求行驶里程；（3）若小红有30元，最多能坐多少公里？',
-      answer: '（1）y=8+1.8(x-3)，即y=1.8x+2.6（x>3）\n（2）x=12公里\n（3）最多约15.2公里' },
-    { id: 30, type: '解答题', knowledgePoints: ['压轴题'], difficulty: '困难', score: 14, scoreRate: 30,
-      question: '综合探究题：如图，在正方形ABCD中，边长为4。点E从A出发沿AB方向运动，点F从B出发沿BC方向运动，速度均为1单位/秒。（1）当t=1时，求EF的长；（2）当t为何值时，△BEF为等腰直角三角形？（3）当t为何值时，四边形AEFD的面积最大？',
-      answer: '（1）EF=2√2\n（2）t=2时，△BEF为等腰直角三角形\n（3）t=2时面积最大为12' },
-  ];
+  // 示例题目已移除，所有题目数据均来自用户上传分析的真实试卷
+  const DEMO_QUESTIONS = [];
 
 
   /* ========================================================================
@@ -5421,7 +5411,7 @@
      功能1：试卷自动批改
      ======================================================================== */
   function openAutoGrade() {
-    var questions = state.questions.length > 0 ? state.questions : DEMO_QUESTIONS;
+    var questions = state.questions;
     var body = '';
 
     // 统计区
@@ -5485,7 +5475,7 @@
     var btn = $('#gradeRunBtn');
     if (btn) { btn.disabled = true; btn.textContent = '批改中...'; }
 
-    var questions = state.questions.length > 0 ? state.questions : DEMO_QUESTIONS;
+    var questions = state.questions;
     var i = 0;
 
     function gradeNext() {
@@ -5521,7 +5511,7 @@
   }
 
   function exportGradeReport() {
-    var questions = state.questions.length > 0 ? state.questions : DEMO_QUESTIONS;
+    var questions = state.questions;
     var report = '=== 试卷自动批改成绩单 ===\n';
     report += '批改时间：' + formatTime(new Date()) + '\n';
     report += '共 ' + questions.length + ' 道题\n\n';
@@ -5548,7 +5538,7 @@
      功能2：错题归纳
      ======================================================================== */
   function openErrorSummary() {
-    var questions = state.questions.length > 0 ? state.questions : DEMO_QUESTIONS;
+    var questions = state.questions;
     var errorQuestions = questions.filter(function(q) { return (q.scoreRate || 0) < 60; });
 
     var body = '';
@@ -5572,9 +5562,14 @@
       // 排序：按错题数量降序
       var sortedKps = Object.keys(groups).sort(function(a, b) { return groups[b].length - groups[a].length; });
 
-      body += '<div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">';
+      body += '<div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">';
       body += '<div style="font-size:14px;color:var(--color-text-muted);">共发现 <b style="color:#EF4444;">' + errorQuestions.length + '</b> 道错题，涉及 <b style="color:var(--color-primary);">' + sortedKps.length + '</b> 个知识点</div>';
+      body += '<div style="display:flex;gap:10px;">';
       body += '<button class="feat-btn feat-btn--ghost" onclick="exportErrorBook()">导出错题本</button>';
+      body += '<button class="feat-btn feat-btn--primary" onclick="closeFeature();openAutoGrade()">';
+      body += '<svg viewBox="0 0 20 20" style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><polyline points="4 10 8 14 16 6"/></svg>';
+      body += '一键批改</button>';
+      body += '</div>';
       body += '</div>';
 
       sortedKps.forEach(function(kp) {
@@ -5615,7 +5610,7 @@
   }
 
   function exportErrorBook() {
-    var questions = state.questions.length > 0 ? state.questions : DEMO_QUESTIONS;
+    var questions = state.questions;
     var errorQuestions = questions.filter(function(q) { return (q.scoreRate || 0) < 60; });
 
     var report = '=== 个性化错题本 ===\n';
@@ -5719,27 +5714,89 @@
     $('#essayPhotoPreview').innerHTML = '<div style="border-radius:12px;overflow:hidden;border:1px solid var(--color-border);"><img src="' + dataUrl + '" style="width:100%;display:block;" /></div>';
     $('#essayDualInput').style.display = 'none';
 
-    // 模拟OCR识别
     var textarea = $('#essayContent');
     textarea.value = '';
     textarea.placeholder = '正在识别作文内容...';
     var btn = $('#essayGradeBtn');
     btn.disabled = true;
 
-    setTimeout(function() {
-      // 模拟识别出的作文内容
-      var sampleEssays = [
-        '春天的校园\n\n当第一缕春风吹过校园，沉睡了一冬的万物开始苏醒。操场边的柳树抽出了嫩绿的新芽，花坛里的迎春花竞相开放，金黄的花朵在阳光下格外耀眼。\n\n教室里传来朗朗的读书声，同学们脱去了厚重的冬装，精神焕发地迎接新学期的挑战。课间休息时，操场上到处是欢声笑语，有的同学在踢毽子，有的在跳绳，还有的在追逐嬉戏。\n\n春天的校园是一幅美丽的画卷，也是一首动人的诗篇。我爱这充满生机与活力的校园，更爱这美好的春天。',
-        '我的梦想\n\n每个人都有自己的梦想，有的人想成为科学家，有的人想成为医生，而我的梦想是成为一名教师。\n\n记得小时候，我常常和小伙伴们玩老师学生的游戏。我总是抢着当老师，站在小黑板前，一本正经地给他们讲课。那时候的感觉，至今想起来仍然温暖。\n\n长大后，我更加坚定了这个梦想。教师不仅传授知识，更塑造灵魂。一个好老师可以改变学生的一生，就像春风化雨，润物无声。\n\n为了实现这个梦想，我现在要努力学习，积累知识，培养耐心和责任感。我相信，只要坚持不懈，终有一天我会站在真正的讲台上，成为一名优秀的人民教师。',
-        '一件难忘的事\n\n生活中有许多难忘的事，但最让我难忘的，是去年暑假和爷爷一起去钓鱼的经历。\n\n那天清晨，天刚蒙蒙亮，爷爷就带着我来到了村边的小河边。河面平静如镜，倒映着岸边的绿树和蓝天。爷爷教我挂鱼饵、甩鱼竿，然后静静地等待。\n\n起初我非常急躁，总是忍不住拉起鱼竿看。爷爷笑着说："钓鱼最重要的是耐心，心急是钓不到鱼的。"听了爷爷的话，我渐渐安静下来，目不转睛地盯着水面上的浮标。\n\n突然，浮标猛地一沉，我赶紧拉起鱼竿，一条银光闪闪的鱼跃出水面！那一刻的喜悦，我永远也忘不了。这次经历不仅让我学会了钓鱼，更让我明白了一个道理：做任何事都需要耐心和坚持。'
-      ];
-      var essay = sampleEssays[Math.floor(Math.random() * sampleEssays.length)];
-      textarea.value = essay;
+    // 调用后端API识别作文图片
+    recognizeImageText(dataUrl, '作文识别').then(function(text) {
+      if (!text || text.trim().length < 10) {
+        showEssayRecognitionError();
+        return;
+      }
+      textarea.value = text.trim();
       textarea.placeholder = '请在此输入或粘贴作文正文，或上传/拍照后自动识别...';
       updateEssayWordCount();
       btn.disabled = false;
-      showToast('作文识别完成，共 ' + essay.length + ' 字', 'success');
-    }, 1800);
+      showToast('作文识别完成，共 ' + text.length + ' 字', 'success');
+    }).catch(function(err) {
+      console.error('作文照片识别失败:', err);
+      showEssayRecognitionError();
+    });
+  }
+
+  /**
+   * 显示作文识别失败的错误提示
+   */
+  function showEssayRecognitionError() {
+    var textarea = $('#essayContent');
+    textarea.placeholder = '请在此输入或粘贴作文正文...';
+    var btn = $('#essayGradeBtn');
+    btn.disabled = false;
+    $('#essayPhotoPreview').innerHTML = '<div style="text-align:center;padding:32px 20px;border:2px dashed var(--color-border);border-radius:12px;">' +
+      '<div style="font-size:40px;margin-bottom:8px;">\u26a0\ufe0f</div>' +
+      '<div style="font-size:15px;font-weight:600;color:var(--color-text);margin-bottom:6px;">照片分析错误</div>' +
+      '<div style="font-size:13px;color:var(--color-text-muted);margin-bottom:16px;line-height:1.6;">无法从图片中识别出作文内容，可能原因：<br/>图片不清晰、光线不足、内容不完整或非作文图片</div>' +
+      '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">' +
+      '<button class="feat-btn feat-btn--primary" onclick="document.getElementById(\'essayPhotoInput\').click()">重新上传图片</button>' +
+      '<button class="feat-btn feat-btn--ghost" onclick="openCameraPicker(handleEssayPhoto)">重新拍照</button>' +
+      '<button class="feat-btn feat-btn--ghost" onclick="resetEssay()">手动输入</button>' +
+      '</div></div>';
+    showToast('照片分析错误，请重新上传正确或清晰的图片', 'warning', 5000);
+  }
+
+  /**
+   * 通用图片文字识别函数
+   * 调用后端 /api/papers/analyze 接口进行 OCR
+   * 返回识别到的文本内容
+   */
+  async function recognizeImageText(dataUrl, title) {
+    if (!state.apiAvailable) {
+      throw new Error('后端服务未连接');
+    }
+    if (!state.user) {
+      openAuthModal('login');
+      throw new Error('请先登录');
+    }
+
+    var blob = dataURLtoBlob(dataUrl);
+    if (!blob) throw new Error('图片格式无效');
+
+    var formData = new FormData();
+    formData.append('mode', 'default');
+    formData.append('title', title || '图片识别');
+    formData.append('files', blob, 'upload.jpg');
+
+    var data = await apiFetch('/api/papers/analyze', {
+      method: 'POST',
+      body: formData,
+    });
+
+    // 从返回结果中提取原始OCR文本
+    var text = '';
+    if (data && data.result) {
+      text = data.result.originalTextPreview || '';
+    }
+    // 如果没有 originalTextPreview，尝试从 questions 中拼接
+    if (!text && data && data.result && data.result.questions) {
+      text = data.result.questions.map(function(q) {
+        return (q.question || '') + (q.answer ? '\n' + q.answer : '');
+      }).join('\n\n');
+    }
+
+    return text;
   }
 
   function resetEssay() {
@@ -5780,43 +5837,19 @@
     btn.disabled = true;
     btn.textContent = 'AI批改中...';
 
-    // 模拟AI批改过程
+    // 深入分析作文内容
     setTimeout(function() {
-      // 基于作文长度和内容质量生成评分
-      var wordCount = content.length;
-      var hasParagraphs = content.split('\n').filter(function(p) { return p.trim(); }).length >= 3;
-      var hasPunctuation = /[，。、；：！？]/.test(content);
-      var hasDescription = /[\u4e00-\u9fa5]{10,}/.test(content);
-
-      // 内容立意 (30分)
-      var contentScore = 18 + Math.min(10, Math.round(wordCount / 50));
-      if (hasDescription) contentScore = Math.min(30, contentScore + 3);
-      var contentFeedback = contentScore >= 26 ? '主题明确，立意深刻，论证充分' : (contentScore >= 20 ? '主题较明确，可进一步深化立意' : '主题不够集中，建议聚焦核心观点');
-
-      // 结构布局 (20分)
-      var structScore = hasParagraphs ? 16 : 10;
-      structScore = Math.min(20, structScore + Math.min(4, Math.round(wordCount / 200)));
-      var structFeedback = structScore >= 16 ? '结构清晰，层次分明，开头结尾呼应' : (structScore >= 12 ? '结构基本合理，段落间过渡可更自然' : '结构较松散，建议重新组织段落');
-
-      // 语言表达 (30分)
-      var langScore = 18 + (hasPunctuation ? 5 : 0) + Math.min(7, Math.round(wordCount / 100));
-      langScore = Math.min(30, langScore);
-      var langFeedback = langScore >= 25 ? '语言流畅，表达准确，用词丰富' : (langScore >= 20 ? '语言通顺，部分句式可更精炼' : '语言略显平淡，建议增加修辞手法');
-
-      // 创新亮点 (20分)
-      var innovScore = 12 + Math.min(8, Math.round(wordCount / 150));
-      if (content.length > 500) innovScore = Math.min(20, innovScore + 2);
-      var innovFeedback = innovScore >= 16 ? '视角独特，立意新颖，有创意亮点' : (innovScore >= 12 ? '有一定新意，可进一步挖掘独特视角' : '创新性不足，建议从不同角度思考');
-
-      var totalScore = contentScore + structScore + langScore + innovScore;
-      var grade = totalScore >= 90 ? 'A · 优秀' : (totalScore >= 80 ? 'B · 良好' : (totalScore >= 70 ? 'C · 中等' : (totalScore >= 60 ? 'D · 及格' : 'E · 不及格')));
+      var analysis = analyzeEssayContent(content, title);
 
       var dims = [
-        { name: '内容立意', max: 30, score: contentScore, feedback: contentFeedback, color: '#2563EB' },
-        { name: '结构布局', max: 20, score: structScore, feedback: structFeedback, color: '#8B5CF6' },
-        { name: '语言表达', max: 30, score: langScore, feedback: langFeedback, color: '#10B981' },
-        { name: '创新亮点', max: 20, score: innovScore, feedback: innovFeedback, color: '#F59E0B' }
+        { name: '内容立意', max: 30, score: analysis.contentScore, feedback: analysis.contentFeedback, color: '#2563EB' },
+        { name: '结构布局', max: 20, score: analysis.structScore, feedback: analysis.structFeedback, color: '#8B5CF6' },
+        { name: '语言表达', max: 30, score: analysis.langScore, feedback: analysis.langFeedback, color: '#10B981' },
+        { name: '创新亮点', max: 20, score: analysis.innovScore, feedback: analysis.innovFeedback, color: '#F59E0B' }
       ];
+
+      var totalScore = analysis.contentScore + analysis.structScore + analysis.langScore + analysis.innovScore;
+      var grade = totalScore >= 90 ? 'A \u00b7 优秀' : (totalScore >= 80 ? 'B \u00b7 良好' : (totalScore >= 70 ? 'C \u00b7 中等' : (totalScore >= 60 ? 'D \u00b7 及格' : 'E \u00b7 不及格')));
 
       var dimsHtml = '';
       dims.forEach(function(d) {
@@ -5831,18 +5864,8 @@
         dimsHtml += '</div>';
       });
 
-      var comment = '';
-      if (totalScore >= 85) {
-        comment = '本文整体表现优秀。' + (title ? '《' + title + '》' : '文章') + '主题鲜明，结构完整，语言表达流畅，展现了较强的写作能力。' + (innovScore >= 16 ? '尤其在创新立意方面表现突出，值得肯定。' : '') + '建议继续保持，在细节描写和情感深度上可进一步打磨。';
-      } else if (totalScore >= 70) {
-        comment = '本文整体表现良好。' + (title ? '《' + title + '》' : '文章') + '具备基本的文章结构和主题表达，语言较为通顺。' + (structScore < 16 ? '建议加强段落间的逻辑衔接，使行文更加流畅。' : '') + (langScore < 25 ? '可以尝试运用更多修辞手法丰富语言表达。' : '') + '继续努力，相信会有更大的进步。';
-      } else {
-        comment = '本文有待提升。' + (title ? '《' + title + '》' : '文章') + '在主题聚焦、结构组织和语言表达方面均有改进空间。建议：1. 明确中心思想，删减与主题无关的内容；2. 重新梳理段落结构，做到层次分明；3. 加强语言训练，多读多写。相信通过练习会有明显进步。';
-      }
-
-      // 动画显示结果
       $('#essayDimensions').innerHTML = dimsHtml;
-      $('#essayComment').textContent = comment;
+      $('#essayComment').textContent = analysis.comment;
 
       // 数字递增动画
       var currentScore = 0;
@@ -5863,6 +5886,251 @@
       btn.textContent = '重新批改';
       showToast('作文批改完成，总分 ' + totalScore + ' 分', 'success');
     }, 1500);
+  }
+
+  /**
+   * 深入分析作文内容，给出基于实际内容的评分
+   * 分析维度：主题立意、结构布局、语言表达、创新亮点
+   */
+  function analyzeEssayContent(content, title) {
+    var wordCount = content.length;
+    var paragraphs = content.split(/\n+/).filter(function(p) { return p.trim().length > 0; });
+    var paraCount = paragraphs.length;
+
+    // === 1. 内容立意分析 (30分) ===
+    var contentScore = 0;
+    var contentFeedback = '';
+
+    // 检查主题是否明确（标题与正文关联度）
+    var hasTitle = title && title.length > 0;
+    var themeKeywords = extractThemeKeywords(content);
+    var keywordCount = themeKeywords.length;
+
+    // 检查是否有具体事例/论据
+    var hasExamples = /[例如|比如|记得|有一次|那年|那天|从前|曾经|身边|亲眼|亲身]/.test(content);
+    var hasDetails = /[\u4e00-\u9fa5]{15,}/.test(content); // 有较长连续描述
+    var hasEmotion = /[感动|温暖|开心|难过|骄傲|惭愧|兴奋|害怕|珍惜|感恩|怀念|憧憬|敬佩]/.test(content);
+    var hasReflection = /[明白|懂得|学会了|体会到|感悟|启示|道理|收获|成长|改变]/.test(content);
+
+    // 立意深度评分
+    if (hasReflection && hasExamples) {
+      contentScore = 26; // 有事例有感悟
+    } else if (hasExamples || hasReflection) {
+      contentScore = 22; // 有事例或感悟
+    } else {
+      contentScore = 16; // 缺乏事例和感悟
+    }
+    // 有情感表达加分
+    if (hasEmotion) contentScore = Math.min(30, contentScore + 2);
+    // 内容充实度加分
+    if (hasDetails && wordCount > 300) contentScore = Math.min(30, contentScore + 2);
+    // 主题集中度
+    if (keywordCount >= 2 && keywordCount <= 5) contentScore = Math.min(30, contentScore + 1);
+
+    if (contentScore >= 26) {
+      contentFeedback = '主题明确，立意深刻，' + (hasExamples ? '有具体事例支撑' : '论据充分') + (hasReflection ? '，有深入的感悟和思考' : '') + '。';
+    } else if (contentScore >= 20) {
+      contentFeedback = '主题较为明确，' + (hasExamples ? '有事例但' : '') + '可进一步深化立意，增加更多具体事例或细节描写。';
+    } else {
+      contentFeedback = '主题不够集中，' + (!hasExamples ? '缺乏具体事例支撑' : '') + (!hasReflection ? '缺少个人感悟和思考' : '') + '，建议聚焦核心观点，用事例和感悟充实内容。';
+    }
+
+    // === 2. 结构布局分析 (20分) ===
+    var structScore = 0;
+    var structFeedback = '';
+
+    // 检查段落结构
+    var hasOpening = paraCount >= 1; // 有开头
+    var hasBody = paraCount >= 3; // 有正文展开
+    var hasEnding = paraCount >= 2 && paragraphs[paraCount - 1].length < paragraphs[0].length * 2; // 末段较短（结尾段）
+
+    // 检查过渡词
+    var hasTransition = /[首先|其次|然后|接着|最后|不仅如此|与此同时|然而|但是|因此|所以|总之|综上所述|换句话说|也就是说|另一方面|与此同时|后来|渐渐地|不知不觉]/.test(content);
+
+    if (paraCount >= 4 && hasTransition) {
+      structScore = 17;
+    } else if (paraCount >= 3) {
+      structScore = 14;
+    } else if (paraCount >= 2) {
+      structScore = 10;
+    } else {
+      structScore = 6;
+    }
+    if (hasEnding) structScore = Math.min(20, structScore + 2);
+    if (hasTransition) structScore = Math.min(20, structScore + 1);
+
+    if (structScore >= 16) {
+      structFeedback = '结构清晰，层次分明，' + (hasTransition ? '段落间过渡自然' : '开头结尾呼应') + '，' + paraCount + '个段落安排合理。';
+    } else if (structScore >= 12) {
+      structFeedback = '结构基本合理，共' + paraCount + '个段落。' + (!hasTransition ? '建议增加过渡词使行文更连贯。' : '') + (!hasEnding ? '注意结尾段落的收束。' : '');
+    } else {
+      structFeedback = '结构较松散，仅' + paraCount + '个段落。建议重新组织，做到有开头、有展开、有结尾，层次分明。';
+    }
+
+    // === 3. 语言表达分析 (30分) ===
+    var langScore = 0;
+    var langFeedback = '';
+
+    // 检查修辞手法
+    var hasSimile = /[像|仿佛|犹如|宛如|好似|好像|如同|犹如|恰似]/.test(content); // 比喻
+    var hasPersonification = /[风.*说|花.*笑|树.*摇|鸟.*唱|太阳.*笑|月.*望|河.*流|山.*立]/.test(content); // 拟人
+    var hasParallelism = hasParallelismInText(content); // 排比
+    var hasQuotes = /[\""]|\u300c|\u300d|\u201c|\u201d/.test(content); // 引用
+    var hasIdioms = hasIdiomsInText(content); // 成语
+
+    // 检查句式多样性
+    var sentences = content.split(/[。！？\n]/).filter(function(s) { return s.trim().length > 3; });
+    var avgSentLen = sentences.length > 0 ? wordCount / sentences.length : 0;
+    var hasVariedSentLen = sentences.length > 3 && sentences.some(function(s) { return s.length > 30; }) && sentences.some(function(s) { return s.length < 15; });
+
+    // 检查标点使用
+    var hasRichPunctuation = /[，。、；：！？""''……——]/.test(content);
+    var punctuationCount = (content.match(/[，。、；：！？""''……——]/g) || []).length;
+
+    langScore = 16; // 基础分
+    if (hasSimile) langScore = Math.min(30, langScore + 3);
+    if (hasPersonification) langScore = Math.min(30, langScore + 2);
+    if (hasParallelism) langScore = Math.min(30, langScore + 3);
+    if (hasQuotes) langScore = Math.min(30, langScore + 1);
+    if (hasIdioms) langScore = Math.min(30, langScore + 2);
+    if (hasVariedSentLen) langScore = Math.min(30, langScore + 2);
+    if (hasRichPunctuation && punctuationCount > wordCount / 20) langScore = Math.min(30, langScore + 1);
+
+    var rhetoricList = [];
+    if (hasSimile) rhetoricList.push('比喻');
+    if (hasPersonification) rhetoricList.push('拟人');
+    if (hasParallelism) rhetoricList.push('排比');
+    if (hasQuotes) rhetoricList.push('引用');
+    if (hasIdioms) rhetoricList.push('成语');
+    var rhetoricStr = rhetoricList.length > 0 ? rhetoricList.join('、') : '';
+
+    if (langScore >= 25) {
+      langFeedback = '语言流畅，表达准确，运用了' + rhetoricStr + '等修辞手法，句式丰富多样。';
+    } else if (langScore >= 20) {
+      langFeedback = '语言通顺，' + (rhetoricStr ? '使用了' + rhetoricStr + '等修辞' : '表达较为清晰') + '，部分句式可更精炼。';
+    } else {
+      langFeedback = '语言略显平淡，' + (!rhetoricStr ? '缺少修辞手法的运用' : '修辞手法较少') + '，建议增加比喻、排比等修辞丰富语言表达。';
+    }
+
+    // === 4. 创新亮点分析 (20分) ===
+    var innovScore = 0;
+    var innovFeedback = '';
+
+    // 检查独特视角
+    var hasUniqueAngle = /[我认为|我觉得|在我看|不同于|与众不同|别具一格|独到|换个角度|换一种|也许|或许|是否]/.test(content);
+    // 检查是否有细节描写
+    var hasFineDetail = /[细微|悄悄|缓缓|轻轻|微微|默默地|偷偷地|不经意|角落|缝隙|指尖|眉头|嘴角|眼神|背影]/.test(content);
+    // 检查是否有对比/反差
+    var hasContrast = /[然而|但是|可是|却|虽然|尽管|反而|与之相反|不同的是|从前.*如今|白天.*夜晚]/.test(content);
+    // 检查是否有想象/联想
+    var hasImagination = /[如果|假如|想象|幻想|仿佛|好像|似乎|梦境|梦想|希望|期待|憧憬]/.test(content);
+
+    innovScore = 10; // 基础分
+    if (hasUniqueAngle) innovScore = Math.min(20, innovScore + 3);
+    if (hasFineDetail) innovScore = Math.min(20, innovScore + 3);
+    if (hasContrast) innovScore = Math.min(20, innovScore + 2);
+    if (hasImagination) innovScore = Math.min(20, innovScore + 2);
+    if (wordCount > 500) innovScore = Math.min(20, innovScore + 2);
+
+    var innovList = [];
+    if (hasUniqueAngle) innovList.push('独特视角');
+    if (hasFineDetail) innovList.push('细节描写');
+    if (hasContrast) innovList.push('对比手法');
+    if (hasImagination) innovList.push('想象联想');
+
+    if (innovScore >= 16) {
+      innovFeedback = '视角独特，立意新颖，' + (innovList.length > 0 ? '有' + innovList.join('、') + '等亮点' : '有创意闪光点') + '。';
+    } else if (innovScore >= 12) {
+      innovFeedback = '有一定新意，' + (innovList.length > 0 ? innovList.join('、') + '运用较好' : '可进一步挖掘独特视角') + '。';
+    } else {
+      innovFeedback = '创新性不足，' + (!hasUniqueAngle ? '缺少独特视角' : '') + (!hasFineDetail ? '，细节描写不够' : '') + '，建议从不同角度思考，增加细节刻画。';
+    }
+
+    // === 综合评语 ===
+    var totalScore = contentScore + structScore + langScore + innovScore;
+    var comment = '';
+    var essayName = title ? '\u300a' + title + '\u300b' : '\u672c\u6587';
+
+    if (totalScore >= 85) {
+      comment = essayName + '整体表现优秀。' + contentFeedback + ' ' + (langScore >= 25 ? '语言表达尤为出色' : '结构布局合理') + '，展现了较强的写作能力。';
+      if (innovScore >= 16) comment += '在创新立意方面表现突出，值得肯定。';
+      comment += '建议继续保持，在' + (langScore < 28 ? '修辞手法的多样性' : '情感深度') + '上可进一步打磨。';
+    } else if (totalScore >= 70) {
+      comment = essayName + '整体表现良好。' + contentFeedback + ' ' + structFeedback;
+      if (langScore < 25) comment += ' 可以尝试运用更多修辞手法（如比喻、排比、拟人等）丰富语言表达。';
+      if (innovScore < 14) comment += ' 建议从独特角度切入，增加细节描写，让文章更有感染力。';
+      comment += ' 继续努力，相信会有更大的进步。';
+    } else {
+      comment = essayName + '有待提升。';
+      if (contentScore < 20) comment += ' 主题需要更加集中，建议用具体事例支撑观点，加入个人感悟。';
+      if (structScore < 14) comment += ' 结构需要重新梳理，做到有开头、有展开、有结尾。';
+      if (langScore < 20) comment += ' 语言需要加强训练，多运用修辞手法。';
+      comment += ' 建议多读优秀范文，多练笔，相信通过练习会有明显进步。';
+    }
+
+    return {
+      contentScore: contentScore,
+      structScore: structScore,
+      langScore: langScore,
+      innovScore: innovScore,
+      comment: comment,
+      contentFeedback: contentFeedback,
+      structFeedback: structFeedback,
+      langFeedback: langFeedback,
+      innovFeedback: innovFeedback
+    };
+  }
+
+  /**
+   * 提取文本中的主题关键词（出现频率较高的词）
+   */
+  function extractThemeKeywords(text) {
+    if (!text) return [];
+    // 移除常见停用词
+    var stopWords = ['的', '了', '是', '在', '我', '有', '和', '就', '不', '人', '都', '一', '一个', '上', '也', '很', '到', '说', '要', '去', '你', '会', '着', '没有', '看', '好', '自己', '这', '那', '它', '他', '她', '们', '把', '被', '让', '从', '向', '为', '以', '于', '对', '与', '及', '但', '或', '而', '且', '如', '因', '所', '之', '其', '此', '什么', '怎么', '为什么', '因为', '所以', '但是', '如果', '虽然', '然而'];
+    var freq = {};
+    // 按2-4字的中文词组统计
+    var matches = text.match(/[\u4e00-\u9fa5]{2,4}/g) || [];
+    matches.forEach(function(w) {
+      if (stopWords.indexOf(w) === -1) {
+        freq[w] = (freq[w] || 0) + 1;
+      }
+    });
+    // 取出现2次以上的关键词
+    var keywords = Object.keys(freq).filter(function(k) { return freq[k] >= 2; });
+    keywords.sort(function(a, b) { return freq[b] - freq[a]; });
+    return keywords.slice(0, 10);
+  }
+
+  /**
+   * 检查文本中是否有排比句（连续3个以上相似结构的句子）
+   */
+  function hasParallelismInText(text) {
+    var sentences = text.split(/[。！？\n]/).filter(function(s) { return s.trim().length > 2; });
+    for (var i = 0; i <= sentences.length - 3; i++) {
+      // 检查连续3句是否有相似的前缀（前2-4字相同）
+      var s1 = sentences[i].trim().slice(0, 4);
+      var s2 = sentences[i + 1].trim().slice(0, 4);
+      var s3 = sentences[i + 2].trim().slice(0, 4);
+      if (s1.length >= 2 && s1 === s2 && s2 === s3) return true;
+      // 或者检查是否有"有的...有的...有的..."结构
+      if (/[有的].*[有的].*[有的]/.test(text)) return true;
+    }
+    return false;
+  }
+
+  /**
+   * 检查文本中是否使用了成语
+   */
+  function hasIdiomsInText(text) {
+    // 常见成语模式检测（4字成语）
+    var commonIdioms = ['春暖花开', '万物复苏', '生机勃勃', '精神焕发', '欢声笑语', '春风化雨', '润物无声', '坚持不懈', '孜孜不倦', '勤奋好学', '一心一意', '专心致志', '全神贯注', '聚精会神', '津津有味', '兴高采烈', '欣喜若狂', '喜出望外', '眉开眼笑', '笑容满面', '心花怒放', '恍然大悟', '茅塞顿开', '豁然开朗', '受益匪浅', '刻骨铭心', '历历在目', '记忆犹新', '难以忘怀', '回味无穷', '流连忘返', '美不胜收', '五彩缤纷', '绚丽多彩', '生机盎然', '春意盎然', '鸟语花香', '山清水秀', '风景如画', '如诗如画', '诗情画意'];
+    for (var i = 0; i < commonIdioms.length; i++) {
+      if (text.indexOf(commonIdioms[i]) !== -1) return true;
+    }
+    // 通用检测：连续4字中文字符且不是常见短语
+    var fourCharMatches = text.match(/[\u4e00-\u9fa5]{4}/g) || [];
+    return fourCharMatches.length > 5; // 如果有很多4字组合，很可能包含成语
   }
 
   /* ========================================================================
@@ -5960,7 +6228,7 @@
     if (!file) return;
 
     if (file.type.startsWith('image/')) {
-      // 图片：模拟OCR
+      // 图片：调用API识别
       var reader = new FileReader();
       reader.onload = function(e) { handleDictPhoto(e.target.result); };
       reader.readAsDataURL(file);
@@ -5980,20 +6248,41 @@
     $('#dictPhotoPreview').innerHTML = '<div style="border-radius:12px;overflow:hidden;border:1px solid var(--color-border);"><img src="' + dataUrl + '" style="width:100%;display:block;" /></div>';
     $('#dictTextInput').value = '';
     $('#dictTextInput').placeholder = '正在识别图片内容...';
+    var startBtn = document.querySelector('#dictInputSection .feat-btn--primary');
+    if (startBtn) startBtn.disabled = true;
 
-    setTimeout(function() {
-      var sampleTexts = [
-        '春天来了，万物复苏，大地披上了绿色的新装。小鸟在枝头歌唱，蝴蝶在花丛中飞舞，小溪潺潺流淌，远处的山峦在阳光下显得格外青翠。',
-        '静夜思 床前明月光 疑是地上霜 举头望明月 低头思故乡 李白',
-        '春晓 春眠不觉晓 处处闻啼鸟 夜来风雨声 花落知多少 孟浩然',
-        '科技改变生活 人工智能 大数据 云计算 物联网 区块链 5G通信 虚拟现实 增强现实 自动驾驶',
-        '观沧海 东临碣石 以观沧海 水何澹澹 山岛竦峙 树木丛生 百草丰茂 秋风萧瑟 洪波涌起'
-      ];
-      var text = sampleTexts[Math.floor(Math.random() * sampleTexts.length)];
-      $('#dictTextInput').value = text;
+    // 调用后端API识别图片内容
+    recognizeImageText(dataUrl, '听写内容识别').then(function(text) {
+      if (!text || text.trim().length < 2) {
+        showDictRecognitionError();
+        return;
+      }
+      $('#dictTextInput').value = text.trim();
       $('#dictTextInput').placeholder = '例如：勾股定理 一次函数 二次函数';
-      showToast('图片识别完成', 'success');
-    }, 1500);
+      if (startBtn) startBtn.disabled = false;
+      showToast('图片识别完成，共 ' + text.length + ' 字', 'success');
+    }).catch(function(err) {
+      console.error('听写图片识别失败:', err);
+      showDictRecognitionError();
+    });
+  }
+
+  /**
+   * 显示听写识别失败的错误提示
+   */
+  function showDictRecognitionError() {
+    $('#dictTextInput').placeholder = '或直接粘贴/输入听写内容';
+    var startBtn = document.querySelector('#dictInputSection .feat-btn--primary');
+    if (startBtn) startBtn.disabled = false;
+    $('#dictPhotoPreview').innerHTML = '<div style="text-align:center;padding:32px 20px;border:2px dashed var(--color-border);border-radius:12px;">' +
+      '<div style="font-size:40px;margin-bottom:8px;">\u26a0\ufe0f</div>' +
+      '<div style="font-size:15px;font-weight:600;color:var(--color-text);margin-bottom:6px;">照片分析错误</div>' +
+      '<div style="font-size:13px;color:var(--color-text-muted);margin-bottom:16px;line-height:1.6;">无法从图片中识别出内容，可能原因：<br/>图片不清晰、光线不足、内容不完整</div>' +
+      '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">' +
+      '<button class="feat-btn feat-btn--primary" onclick="document.getElementById(\'dictFileInput\').click()">重新上传图片</button>' +
+      '<button class="feat-btn feat-btn--ghost" onclick="openCameraPicker(handleDictPhoto)">重新拍照</button>' +
+      '</div></div>';
+    showToast('照片分析错误，请重新上传正确或清晰的图片', 'warning', 5000);
   }
 
   function extractWords(text) {
@@ -6019,26 +6308,124 @@
       return;
     }
 
-    var words = extractWords(text);
-    if (words.length === 0) {
-      showToast('未能从内容中提取到词语，请输入更多内容', 'warning');
-      return;
+    var btn = document.querySelector('#dictInputSection .feat-btn--primary');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = '正在分析内容...';
     }
 
-    // 限制最多20个词
-    if (words.length > 20) words = words.slice(0, 20);
+    // 先仔细分析内容，再提取词语
+    setTimeout(function() {
+      var analysis = analyzeDictationContent(text);
 
-    dictationState.words = words;
-    dictationState.index = 0;
-    dictationState.isPlaying = false;
+      if (analysis.words.length === 0) {
+        if (btn) { btn.disabled = false; btn.textContent = '提取词语并开始听写'; }
+        showToast('未能从内容中提取到有效词语，请输入更多内容', 'warning');
+        return;
+      }
 
-    // 切换到听写界面
-    $('#dictInputSection').style.display = 'none';
-    $('#dictPlaySection').style.display = 'block';
-    $('#dictTotal').textContent = words.length;
-    $('#dictWordCount').textContent = '共 ' + words.length + ' 个词语 · 使用浏览器语音朗读';
+      // 限制最多20个词
+      var words = analysis.words.slice(0, 20);
 
-    showToast('提取到 ' + words.length + ' 个词语，可以开始听写了', 'success');
+      dictationState.words = words;
+      dictationState.index = 0;
+      dictationState.isPlaying = false;
+
+      // 切换到听写界面
+      $('#dictInputSection').style.display = 'none';
+      $('#dictPlaySection').style.display = 'block';
+      $('#dictTotal').textContent = words.length;
+
+      var hint = '共 ' + words.length + ' 个词语';
+      if (analysis.type === 'poem') {
+        hint += ' · 检测到诗歌内容';
+      } else if (analysis.type === 'vocabulary') {
+        hint += ' · 检测到词语列表';
+      } else if (analysis.type === 'passage') {
+        hint += ' · 从短文中提取关键词';
+      }
+      hint += ' · 使用浏览器语音朗读';
+      $('#dictWordCount').textContent = hint;
+
+      if (btn) { btn.disabled = false; btn.textContent = '提取词语并开始听写'; }
+      showToast('提取到 ' + words.length + ' 个词语，可以开始听写了', 'success');
+    }, 500);
+  }
+
+  /**
+   * 仔细分析听写内容，智能提取词语
+   * 分析内容类型（诗歌/词语列表/短文），采用不同的提取策略
+   */
+  function analyzeDictationContent(text) {
+    var type = 'passage'; // 默认短文类型
+    var words = [];
+
+    // 判断内容类型
+    // 1. 检测是否为诗歌（每行较短，且有诗歌特征词）
+    var lines = text.split(/\n+/).filter(function(l) { return l.trim().length > 0; });
+    var avgLineLen = lines.length > 0 ? text.length / lines.length : 0;
+    var hasPoemKeywords = /[春|秋|月|风|花|雪|山|水|夜|晨|江|河|湖|海|云|雨|思|望|忆|梦|别|归|游|咏|题]/.test(text);
+    if (lines.length >= 3 && avgLineLen < 12 && hasPoemKeywords) {
+      type = 'poem';
+    }
+
+    // 2. 检测是否为词语列表（词语间用空格/逗号/顿号分隔，每个片段较短）
+    var separators = /[\s，。、；：！？""''（）()\[\]{},.!?;:\n\r·]+/;
+    var parts = text.split(separators).filter(function(p) { return p && p.trim().length >= 2; });
+    var shortPartCount = parts.filter(function(p) { return p.trim().length <= 8; }).length;
+    if (shortPartCount / Math.max(parts.length, 1) > 0.7 && parts.length >= 3) {
+      type = 'vocabulary';
+    }
+
+    // 根据类型采用不同提取策略
+    if (type === 'poem') {
+      // 诗歌：按行提取，每行作为一个听写单元
+      lines.forEach(function(line) {
+        var trimmed = line.trim();
+        if (trimmed.length >= 2) {
+          // 如果一行中有多个句子（用空格分隔），分别提取
+          var subParts = trimmed.split(/[\s]+/).filter(function(s) { return s.length >= 2; });
+          if (subParts.length > 1) {
+            subParts.forEach(function(s) { words.push(s); });
+          } else {
+            words.push(trimmed);
+          }
+        }
+      });
+    } else if (type === 'vocabulary') {
+      // 词语列表：直接按分隔符分割
+      words = parts.map(function(p) { return p.trim(); }).filter(function(p) { return p.length >= 2; });
+    } else {
+      // 短文：提取关键词和短语
+      // 先按标点分割成短语
+      var phrases = text.split(separators).filter(function(p) { return p && p.trim().length >= 2; });
+      
+      // 过滤掉太长或太短的片段，保留2-6字的词语
+      phrases.forEach(function(p) {
+        var t = p.trim();
+        if (t.length >= 2 && t.length <= 8) {
+          words.push(t);
+        }
+      });
+
+      // 如果提取到的词太少，放宽限制
+      if (words.length < 3) {
+        words = phrases.filter(function(p) {
+          var t = p.trim();
+          return t.length >= 2 && t.length <= 12;
+        });
+      }
+    }
+
+    // 去重
+    var seen = {};
+    var unique = [];
+    words.forEach(function(w) {
+      var t = w.trim();
+      if (t && !seen[t]) { seen[t] = true; unique.push(t); }
+    });
+
+    return { type: type, words: unique };
   }
 
   function toggleDictation() {
@@ -6187,6 +6574,41 @@
   /* ========================================================================
      功能5：拍照搜题
      ======================================================================== */
+  /**
+   * 从试卷分析页面直接打开摄像头拍照搜索
+   * 使用通用cameraPicker组件（含前后置翻转），拍照后直接进入拍照搜题分析
+   */
+  function openPhotoSearchCamera() {
+    // 检查登录和服务状态
+    if (!state.apiAvailable) {
+      showToast('请先连接后端服务并登录后再使用拍照搜索', 'warning', 5000);
+      return;
+    }
+    if (!state.user) {
+      openAuthModal('login');
+      return;
+    }
+    // 打开通用拍照组件
+    openCameraPicker(function(dataUrl) {
+      // 拍照成功后，打开拍照搜题弹窗并自动开始分析
+      openPhotoSearch();
+      // 设置预览图片
+      setTimeout(function() {
+        var preview = $('#searchPreview');
+        if (preview) {
+          preview.innerHTML = '<img src="' + dataUrl + '" alt="预览" />';
+          preview.classList.add('show');
+          $('#searchUploadZone').style.display = 'none';
+          $('#searchFooter').style.display = 'flex';
+        }
+        // 自动开始搜索
+        setTimeout(function() {
+          runPhotoSearch();
+        }, 500);
+      }, 300);
+    });
+  }
+
   function openPhotoSearch() {
     var body = '';
 
@@ -6246,40 +6668,121 @@
   function runPhotoSearch() {
     var btn = $('#searchRunBtn');
     btn.disabled = true;
-    btn.textContent = '搜索中...';
+    btn.textContent = '识别中...';
 
-    // 模拟搜索过程
-    setTimeout(function() {
-      var questions = state.questions.length > 0 ? state.questions : DEMO_QUESTIONS;
-      // 随机抽取5道题作为匹配结果
-      var shuffled = questions.slice().sort(function() { return Math.random() - 0.5; });
-      var results = shuffled.slice(0, Math.min(5, shuffled.length));
+    // 获取预览图片
+    var previewImg = $('#searchPreview').querySelector('img');
+    if (!previewImg || !previewImg.src) {
+      showToast('请先上传或拍照选择题目图片', 'warning');
+      btn.disabled = false;
+      btn.textContent = '开始搜索匹配';
+      return;
+    }
 
-      var resultsHtml = '<div style="font-size:15px;font-weight:600;color:var(--color-text-title);margin-bottom:12px;">找到 <span style="color:var(--color-primary);">' + results.length + '</span> 道匹配题目</div>';
+    var dataUrl = previewImg.src;
 
-      results.forEach(function(q, i) {
-        var diffColor = q.difficulty === '简单' ? { bg: 'rgba(16,185,129,0.1)', text: '#10B981' } :
-                        (q.difficulty === '困难' ? { bg: 'rgba(239,68,68,0.1)', text: '#EF4444' } : { bg: 'rgba(245,158,11,0.1)', text: '#F59E0B' });
+    // 检查后端服务
+    if (!state.apiAvailable) {
+      showPhotoSearchError('后端服务未连接，无法识别图片内容。请确保服务已部署并登录后使用。');
+      btn.disabled = false;
+      btn.textContent = '开始搜索匹配';
+      return;
+    }
+    if (!state.user) {
+      openAuthModal('login');
+      btn.disabled = false;
+      btn.textContent = '开始搜索匹配';
+      return;
+    }
 
-        resultsHtml += '<div class="search-result-card">';
-        resultsHtml += '<div class="search-result-question">' + (i + 1) + '. ' + (q.question || '题目加载中...') + '</div>';
-        resultsHtml += '<div class="search-result-answer"><b>答案解析：</b>' + (q.answer || '暂无答案') + '</div>';
-        resultsHtml += '<div class="search-result-meta">';
-        resultsHtml += '<span class="search-result-tag" style="background:rgba(37,99,235,0.1);color:#2563EB;">' + (q.type || '—') + '</span>';
-        resultsHtml += '<span class="search-result-tag" style="background:' + diffColor.bg + ';color:' + diffColor.text + ';">' + (q.difficulty || '—') + '</span>';
-        (q.knowledgePoints || []).forEach(function(kp) {
-          resultsHtml += '<span class="search-result-tag" style="background:var(--color-bg);color:var(--color-text-muted);">' + kp + '</span>';
-        });
-        resultsHtml += '</div>';
-        resultsHtml += '</div>';
-      });
+    btn.textContent = 'AI识别分析中...';
 
-      $('#searchResults').innerHTML = resultsHtml;
-      $('#searchResults').classList.add('show');
+    // 调用后端API识别图片内容
+    recognizePhotoSearchImage(dataUrl).then(function(questions) {
+      if (!questions || questions.length === 0) {
+        showPhotoSearchError();
+        return;
+      }
+      renderPhotoSearchResults(questions);
       btn.disabled = false;
       btn.textContent = '重新搜索';
-      showToast('搜索完成，找到 ' + results.length + ' 道匹配题目', 'success');
-    }, 1200);
+      showToast('搜索完成，识别到 ' + questions.length + ' 道题目', 'success');
+    }).catch(function(err) {
+      console.error('拍照搜题识别失败:', err);
+      var msg = err && err.message ? err.message : '';
+      if (msg.indexOf('未连接') !== -1 || msg.indexOf('登录') !== -1) {
+        showPhotoSearchError(msg);
+      } else {
+        showPhotoSearchError();
+      }
+      btn.disabled = false;
+      btn.textContent = '开始搜索匹配';
+    });
+  }
+
+  /**
+   * 调用后端API识别拍照搜题的图片
+   */
+  async function recognizePhotoSearchImage(dataUrl) {
+    var blob = dataURLtoBlob(dataUrl);
+    if (!blob) throw new Error('图片格式无效');
+
+    var formData = new FormData();
+    formData.append('mode', 'default');
+    formData.append('title', '拍照搜题');
+    formData.append('files', blob, 'search.jpg');
+
+    var data = await apiFetch('/api/papers/analyze', {
+      method: 'POST',
+      body: formData,
+    });
+
+    var questions = normalizeQuestions(data.result && data.result.questions ? data.result.questions : []);
+    return questions;
+  }
+
+  /**
+   * 显示拍照搜题识别失败的错误提示
+   */
+  function showPhotoSearchError(customMsg) {
+    var msg = customMsg || '无法从图片中识别出题目内容，可能原因：图片不清晰、光线不足、题目不完整或非试卷题目';
+    $('#searchResults').innerHTML = '<div style="text-align:center;padding:40px 20px;">' +
+      '<div style="font-size:48px;margin-bottom:12px;">\u26a0\ufe0f</div>' +
+      '<div style="font-size:15px;font-weight:600;color:var(--color-text);margin-bottom:8px;">照片分析错误</div>' +
+      '<div style="font-size:13px;color:var(--color-text-muted);margin-bottom:20px;line-height:1.6;">' + msg + '</div>' +
+      '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">' +
+      '<button class="feat-btn feat-btn--primary" onclick="document.getElementById(\'searchPhotoInput\').click()">重新上传图片</button>' +
+      '<button class="feat-btn feat-btn--ghost" onclick="openCameraPicker(handleSearchCameraPhoto)">重新拍照</button>' +
+      '</div></div>';
+    $('#searchResults').classList.add('show');
+    showToast('照片分析错误，请重新上传正确或清晰的图片', 'warning', 5000);
+  }
+
+  /**
+   * 渲染拍照搜题结果
+   */
+  function renderPhotoSearchResults(questions) {
+    var resultsHtml = '<div style="font-size:15px;font-weight:600;color:var(--color-text-title);margin-bottom:12px;">找到 <span style="color:var(--color-primary);">' + questions.length + '</span> 道匹配题目</div>';
+
+    questions.forEach(function(q, i) {
+      var diffColor = q.difficulty === '简单' ? { bg: 'rgba(16,185,129,0.1)', text: '#10B981' } :
+                      (q.difficulty === '困难' ? { bg: 'rgba(239,68,68,0.1)', text: '#EF4444' } : { bg: 'rgba(245,158,11,0.1)', text: '#F59E0B' });
+
+      resultsHtml += '<div class="search-result-card">';
+      resultsHtml += '<div class="search-result-question">' + (i + 1) + '. ' + escapeHtml(q.question || '题目加载中...') + '</div>';
+      resultsHtml += '<div class="search-result-answer"><b>答案解析：</b>' + escapeHtml(q.answer || '暂无答案') + '</div>';
+      resultsHtml += '<div class="search-result-meta">';
+      resultsHtml += '<span class="search-result-tag" style="background:rgba(37,99,235,0.1);color:#2563EB;">' + escapeHtml(q.type || '—') + '</span>';
+      resultsHtml += '<span class="search-result-tag" style="background:' + diffColor.bg + ';color:' + diffColor.text + ';">' + escapeHtml(q.difficulty || '—') + '</span>';
+      (q.knowledgePoints || []).forEach(function(kp) {
+        resultsHtml += '<span class="search-result-tag" style="background:var(--color-bg);color:var(--color-text-muted);">' + escapeHtml(kp) + '</span>';
+      });
+      resultsHtml += '</div>';
+      resultsHtml += '</div>';
+    });
+
+    $('#searchResults').innerHTML = resultsHtml;
+    $('#searchResults').classList.add('show');
   }
 
   function resetPhotoSearch() {
@@ -6297,7 +6800,7 @@
   /* ========================================================================
      功能6：口算批改
      ======================================================================== */
-  var mentalState = { problems: [], checked: false };
+  var mentalState = { problems: [], checked: false, grade: 3 };
 
   function openMentalMath() {
     mentalState.problems = [];
@@ -6346,13 +6849,77 @@
   }
 
   function startMentalMathManual() {
-    mentalState.problems = generateMentalProblems(10);
+    // 根据用户已分析的试卷推断年级，智能出题
+    var grade = inferUserGrade();
+    mentalState.problems = generateMentalProblems(10, grade);
     mentalState.checked = false;
+    mentalState.grade = grade;
     $('#mentalInputZone').style.display = 'none';
     $('#mentalProblemsArea').style.display = 'block';
     $('#mentalPhotoPreview').style.display = 'none';
-    $('#mentalProblemsHint').textContent = '共 10 道口算题 · 填入答案后点击"提交批改"';
+    var gradeLabel = grade <= 2 ? '一二年级' : grade <= 4 ? '三四年级' : grade <= 6 ? '五六年级' : grade <= 8 ? '初中' : '高中';
+    $('#mentalProblemsHint').innerHTML = '共 10 道口算题 · <span style="color:var(--color-primary);font-weight:600;">' + gradeLabel + '难度</span> · 填入答案后点击"提交批改"';
     renderMentalProblems();
+  }
+
+  /**
+   * 根据用户已分析的试卷推断年级（1-12）
+   * 分析维度：知识点、难度分布、题型
+   */
+  function inferUserGrade() {
+    // 如果用户没有分析过任何试卷，默认三年级
+    if (!state.questions || state.questions.length === 0) return 3;
+
+    var score = 0; // 年级分数
+    var kpMap = {}; // 知识点统计
+
+    state.questions.forEach(function(q) {
+      // 根据难度加分
+      if (q.difficulty === '困难') score += 3;
+      else if (q.difficulty === '中等') score += 2;
+      else score += 1;
+
+      // 统计知识点
+      if (q.knowledgePoints) {
+        q.knowledgePoints.forEach(function(kp) { kpMap[kp] = (kpMap[kp] || 0) + 1; });
+      }
+
+      // 根据题型加分
+      if (q.type === '解答题') score += 2;
+      if (q.type === '填空题') score += 1;
+    });
+
+    // 根据知识点推断年级
+    var highSchoolKps = ['三角函数', '向量', '导数', '圆锥曲线', '复数', '数列', '排列组合', '二项式', '立体几何', '极限'];
+    var middleSchoolKps = ['二次函数', '相似三角形', '勾股定理', '一次函数', '概率统计', '不等式', '反比例函数', '圆'];
+    var primaryKps = ['加减法', '乘除法', '分数', '小数', '面积', '周长', '图形认识'];
+
+    Object.keys(kpMap).forEach(function(kp) {
+      if (highSchoolKps.indexOf(kp) >= 0) score += 5 * kpMap[kp];
+      else if (middleSchoolKps.indexOf(kp) >= 0) score += 3 * kpMap[kp];
+      else if (primaryKps.indexOf(kp) >= 0) score += 1 * kpMap[kp];
+    });
+
+    // 根据平均得分率微调：低得分率说明题目较难，年级可能更高
+    var avgScoreRate = 0;
+    var count = 0;
+    state.questions.forEach(function(q) {
+      if (q.scoreRate) { avgScoreRate += q.scoreRate; count++; }
+    });
+    if (count > 0) {
+      avgScoreRate /= count;
+      if (avgScoreRate < 50) score += 3;
+      else if (avgScoreRate < 70) score += 1;
+    }
+
+    // 映射到年级
+    var avgScore = score / state.questions.length;
+    if (avgScore >= 6) return 10; // 高一及以上
+    if (avgScore >= 5) return 9;  // 初三
+    if (avgScore >= 4) return 8;  // 初二
+    if (avgScore >= 3) return 7;  // 初一
+    if (avgScore >= 2) return 5;  // 五年级
+    return 3; // 默认三年级
   }
 
   function handleMentalMathPhotoUpload(event) {
@@ -6369,20 +6936,152 @@
     $('#mentalPhotoPreview').innerHTML = '<div style="border-radius:12px;overflow:hidden;border:1px solid var(--color-border);"><img src="' + dataUrl + '" style="width:100%;display:block;" /></div>';
     $('#mentalInputZone').style.display = 'none';
 
-    // 模拟OCR识别过程
+    // 识别过程
     var hint = $('#mentalProblemsHint');
     $('#mentalProblemsArea').style.display = 'block';
     $('#mentalProblems').innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--color-text-muted);"><div style="display:inline-block;width:32px;height:32px;border:3px solid var(--color-border);border-top-color:var(--color-primary);border-radius:50%;animation:spin 0.8s linear infinite;"></div><div style="margin-top:12px;font-size:14px;">正在识别口算题目...</div></div>';
     $('#mentalCheckBtn').style.display = 'none';
 
-    setTimeout(function() {
-      mentalState.problems = generateMentalProblems(10);
-      mentalState.checked = false;
-      $('#mentalProblemsHint').textContent = '识别到 10 道口算题 · 填入答案后点击"提交批改"';
-      $('#mentalCheckBtn').style.display = 'inline-flex';
-      renderMentalProblems();
-      showToast('识别完成，共 10 道口算题', 'success');
-    }, 1500);
+    // 尝试通过后端API识别图片
+    recognizeMentalMathPhoto(dataUrl).then(function(problems) {
+      if (problems && problems.length > 0) {
+        mentalState.problems = problems;
+        mentalState.checked = false;
+        $('#mentalProblemsHint').textContent = '识别到 ' + problems.length + ' 道口算题 · 填入答案后点击"提交批改"';
+        $('#mentalCheckBtn').style.display = 'inline-flex';
+        renderMentalProblems();
+        showToast('识别完成，共 ' + problems.length + ' 道口算题', 'success');
+      } else {
+        // 识别失败
+        showMentalMathRecognitionError();
+      }
+    }).catch(function(err) {
+      console.error('口算照片识别失败:', err);
+      // 根据错误类型显示不同提示
+      if (err.message === '后端服务未连接' || err.message === '请先登录') {
+        showMentalMathRecognitionError(err.message === '请先登录' ? '请先登录后再使用照片识别功能' : '需要连接后端服务才能识别图片，请确保服务已部署并登录');
+      } else {
+        showMentalMathRecognitionError();
+      }
+    });
+  }
+
+  /**
+   * 显示口算识别失败的错误提示
+   */
+  function showMentalMathRecognitionError(customMsg) {
+    var desc = customMsg || '无法从图片中识别出口算题目，可能原因：<br/>图片不清晰、光线不足、题目不完整或非口算题';
+    $('#mentalProblems').innerHTML = '<div style="text-align:center;padding:40px 20px;">' +
+      '<div style="font-size:48px;margin-bottom:12px;">\u26a0\ufe0f</div>' +
+      '<div style="font-size:15px;font-weight:600;color:var(--color-text);margin-bottom:8px;">照片分析错误</div>' +
+      '<div style="font-size:13px;color:var(--color-text-muted);margin-bottom:20px;line-height:1.6;">' + desc + '</div>' +
+      '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">' +
+      '<button class="feat-btn feat-btn--primary" onclick="$(\'#mentalPhotoInput\').click()">重新上传图片</button>' +
+      '<button class="feat-btn feat-btn--ghost" onclick="openCameraPicker(handleMentalMathPhoto)">重新拍照</button>' +
+      '<button class="feat-btn feat-btn--ghost" onclick="startMentalMathManual()">改为手动出题</button>' +
+      '</div></div>';
+    $('#mentalProblemsHint').textContent = '';
+    $('#mentalCheckBtn').style.display = 'none';
+    showToast(customMsg || '照片分析错误，请重新上传正确或清晰的图片', 'warning', 5000);
+  }
+
+  /**
+   * 通过后端API识别口算题照片
+   * 返回: Promise<problems[]> — 识别成功返回题目数组，失败返回 null
+   */
+  async function recognizeMentalMathPhoto(dataUrl) {
+    // 检查后端是否可用
+    if (!state.apiAvailable) {
+      throw new Error('后端服务未连接');
+    }
+    if (!state.user) {
+      throw new Error('请先登录');
+    }
+
+    // 将 dataUrl 转为 Blob
+    var blob = dataURLtoBlob(dataUrl);
+    if (!blob) throw new Error('图片格式无效');
+
+    var formData = new FormData();
+    formData.append('mode', 'default');
+    formData.append('title', '口算批改');
+    formData.append('images', blob, 'mental_math.jpg');
+
+    // 调用后端分析接口
+    var data = await apiFetch('/api/papers/analyze', {
+      method: 'POST',
+      body: formData,
+    });
+
+    var questions = normalizeQuestions(data.result && data.result.questions ? data.result.questions : []);
+    if (!questions || questions.length === 0) return null;
+
+    // 将识别到的题目转换为口算题格式
+    var problems = [];
+    questions.forEach(function(q) {
+      // 尝试从题目文本中提取算式
+      var expr = extractMathExpression(q.question);
+      if (expr) {
+        var answer = evalMathExpression(expr);
+        if (answer !== null) {
+          problems.push({ text: expr, answer: answer, original: q });
+        }
+      }
+    });
+
+    return problems.length > 0 ? problems : null;
+  }
+
+  /**
+   * 从文本中提取数学算式（如 "3 + 5 = ?" → "3 + 5"）
+   */
+  function extractMathExpression(text) {
+    if (!text) return null;
+    // 匹配数字+运算符+数字的模式
+    var match = text.match(/(-?\d+)\s*([+\u2212\u00d7\u00f7\u00b7\u2014\-*/xX])\s*(-?\d+)/);
+    if (!match) return null;
+    var a = match[1];
+    var op = match[2];
+    var b = match[3];
+    // 统一运算符
+    op = op.replace('\u2212', '-').replace('\u00d7', '\u00d7').replace('\u00f7', '\u00f7').replace('\u00b7', '\u00d7').replace('\u2014', '-').replace(/x/i, '\u00d7');
+    return a + ' ' + op + ' ' + b;
+  }
+
+  /**
+   * 计算数学表达式
+   */
+  function evalMathExpression(expr) {
+    try {
+      // 将显示符号转为可计算符号
+      var calc = expr.replace(/\u00d7/g, '*').replace(/\u00f7/g, '/').replace(/\u2212/g, '-');
+      // 安全计算（仅允许数字和运算符）
+      if (!/^[\d\s+\-*/().]+$/.test(calc)) return null;
+      var result = Function('"use strict"; return (' + calc + ')')();
+      // 取整（口算题答案为整数）
+      if (Number.isInteger(result)) return result;
+      return Math.round(result * 100) / 100;
+    } catch (e) {
+      return null;
+    }
+  }
+  /**
+   * dataURL 转 Blob
+   */
+  function dataURLtoBlob(dataUrl) {
+    try {
+      var arr = dataUrl.split(',');
+      var mime = arr[0].match(/:(.*?);/)[1];
+      var bstr = atob(arr[1]);
+      var n = bstr.length;
+      var u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      return new Blob([u8arr], { type: mime });
+    } catch (e) {
+      return null;
+    }
   }
 
   function renderMentalProblems() {
@@ -6398,28 +7097,90 @@
     $('#mentalProblems').innerHTML = html;
   }
 
-  function generateMentalProblems(count) {
+  function generateMentalProblems(count, grade) {
+    grade = grade || 3; // 默认三年级
     var problems = [];
-    var operators = ['+', '-', '*'];
+
+    // 根据年级选择运算类型和数值范围
+    var config;
+    if (grade <= 2) {
+      // 一二年级：20以内加减法
+      config = {
+        operators: ['+', '-'],
+        addMax: 20, addMin: 1,
+        subMax: 20, subMin: 1,
+        multMax: 0, // 不出乘法
+        divMax: 0,
+      };
+    } else if (grade <= 4) {
+      // 三四年级：百以内加减、九九乘法
+      config = {
+        operators: ['+', '-', '*'],
+        addMax: 99, addMin: 10,
+        subMax: 99, subMin: 10,
+        multMax: 9, multMin: 2,
+        divMax: 0,
+      };
+    } else if (grade <= 6) {
+      // 五六年级：大数运算、简单除法
+      config = {
+        operators: ['+', '-', '*', '/'],
+        addMax: 500, addMin: 50,
+        subMax: 500, subMin: 50,
+        multMax: 15, multMin: 3,
+        divMax: 12, divMin: 2,
+      };
+    } else if (grade <= 9) {
+      // 初中：含负数、较大数、混合运算
+      config = {
+        operators: ['+', '-', '*', '/'],
+        addMax: 2000, addMin: 100,
+        subMax: 2000, subMin: 100,
+        multMax: 25, multMin: 5,
+        divMax: 20, divMin: 3,
+        allowNegative: true,
+      };
+    } else {
+      // 高中：大数混合运算
+      config = {
+        operators: ['+', '-', '*', '/'],
+        addMax: 9999, addMin: 500,
+        subMax: 9999, subMin: 500,
+        multMax: 50, multMin: 10,
+        divMax: 30, divMin: 5,
+        allowNegative: true,
+      };
+    }
+
     for (var i = 0; i < count; i++) {
-      var op = operators[Math.floor(Math.random() * operators.length)];
+      var op = config.operators[Math.floor(Math.random() * config.operators.length)];
       var a, b, answer, text;
+
       if (op === '+') {
-        a = Math.floor(Math.random() * 50) + 10;
-        b = Math.floor(Math.random() * 50) + 10;
+        a = Math.floor(Math.random() * (config.addMax - config.addMin + 1)) + config.addMin;
+        b = Math.floor(Math.random() * (config.addMax - config.addMin + 1)) + config.addMin;
+        if (config.allowNegative && Math.random() < 0.3) b = -b;
         answer = a + b;
         text = a + ' + ' + b;
       } else if (op === '-') {
-        a = Math.floor(Math.random() * 60) + 30;
-        b = Math.floor(Math.random() * (a - 5)) + 5;
+        a = Math.floor(Math.random() * (config.subMax - config.subMin + 1)) + config.subMin;
+        b = Math.floor(Math.random() * (a - config.subMin)) + config.subMin;
+        if (config.allowNegative && Math.random() < 0.3) { var tmp = a; a = b; b = tmp; }
         answer = a - b;
         text = a + ' - ' + b;
-      } else {
-        a = Math.floor(Math.random() * 9) + 2;
-        b = Math.floor(Math.random() * 9) + 2;
+      } else if (op === '*') {
+        a = Math.floor(Math.random() * (config.multMax - config.multMin + 1)) + config.multMin;
+        b = Math.floor(Math.random() * (config.multMax - config.multMin + 1)) + config.multMin;
         answer = a * b;
         text = a + ' \u00d7 ' + b;
+      } else if (op === '/') {
+        // 确保整除
+        b = Math.floor(Math.random() * (config.divMax - config.divMin + 1)) + config.divMin;
+        answer = Math.floor(Math.random() * (config.divMax - config.divMin + 1)) + config.divMin;
+        a = b * answer;
+        text = a + ' \u00f7 ' + b;
       }
+
       problems.push({ text: text, answer: answer });
     }
     return problems;
@@ -6481,6 +7242,7 @@
      ======================================================================== */
   var cameraPickerStream = null;
   var cameraPickerCallback = null;
+  var cameraPickerFacing = 'environment'; // 'environment' 后置, 'user' 前置
 
   function isCameraSupported() {
     return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
@@ -6584,6 +7346,7 @@
 
   function openCameraPicker(callback) {
     cameraPickerCallback = callback;
+    cameraPickerFacing = 'environment'; // 默认后置摄像头
     $('#cameraPickerOverlay').classList.add('show');
     // 重置状态
     $('#cameraPickerPlaceholder').style.display = 'flex';
@@ -6591,6 +7354,7 @@
     $('#cameraPickerFrame').style.display = 'none';
     $('#cameraPickerLine').style.display = 'none';
     $('#cameraPickerCaptureBtn').style.display = 'none';
+    $('#cameraPickerFlipBtn').style.display = 'none';
     var startBtn = $('#cameraPickerStartBtn');
     startBtn.style.display = 'inline-flex';
     startBtn.disabled = false;
@@ -6619,7 +7383,7 @@
       return;
     }
 
-    requestCameraStream().then(function(stream) {
+    requestCameraStreamWithFacing(cameraPickerFacing).then(function(stream) {
       cameraPickerStream = stream;
       var video = $('#cameraPickerVideo');
       video.srcObject = stream;
@@ -6628,13 +7392,68 @@
       $('#cameraPickerFrame').style.display = 'block';
       $('#cameraPickerLine').style.display = 'block';
       $('#cameraPickerCaptureBtn').style.display = 'inline-flex';
+      // 显示翻转按钮（手机端尤其有用）
+      $('#cameraPickerFlipBtn').style.display = 'inline-flex';
       btn.style.display = 'none';
-      showToast('摄像头已开启，请对准目标拍照', 'success');
+      var facingLabel = cameraPickerFacing === 'environment' ? '后置' : '前置';
+      showToast('摄像头已开启（' + facingLabel + '），请对准目标拍照', 'success');
     }).catch(function(err) {
       showToast('无法访问摄像头：' + getCameraErrorMessage(err), 'error');
       btn.disabled = false;
       btn.textContent = '开启摄像头';
     });
+  }
+
+  /**
+   * 翻转摄像头（前置↔后置）
+   */
+  function flipCameraPicker() {
+    // 切换 facing 模式
+    cameraPickerFacing = cameraPickerFacing === 'environment' ? 'user' : 'environment';
+
+    // 停止当前流
+    if (cameraPickerStream) {
+      cameraPickerStream.getTracks().forEach(function(t) { t.stop(); });
+      cameraPickerStream = null;
+    }
+
+    // 重新请求新方向的摄像头
+    var video = $('#cameraPickerVideo');
+    video.style.opacity = '0.3';
+
+    requestCameraStreamWithFacing(cameraPickerFacing).then(function(stream) {
+      cameraPickerStream = stream;
+      video.srcObject = stream;
+      video.style.opacity = '1';
+      var facingLabel = cameraPickerFacing === 'environment' ? '后置' : '前置';
+      showToast('已切换到' + facingLabel + '摄像头', 'success');
+    }).catch(function(err) {
+      video.style.opacity = '1';
+      showToast('切换摄像头失败：' + getCameraErrorMessage(err), 'error');
+      // 恢复原方向
+      cameraPickerFacing = cameraPickerFacing === 'environment' ? 'user' : 'environment';
+      requestCameraStreamWithFacing(cameraPickerFacing).then(function(stream) {
+        cameraPickerStream = stream;
+        video.srcObject = stream;
+      });
+    });
+  }
+
+  /**
+   * 按指定方向请求摄像头流
+   */
+  function requestCameraStreamWithFacing(facingMode) {
+    stopAllCameraStreams();
+
+    return new Promise(function(resolve) { setTimeout(resolve, 150); })
+      .then(function() {
+        var videoConstraints = {
+          facingMode: { ideal: facingMode },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        };
+        return navigator.mediaDevices.getUserMedia({ video: videoConstraints });
+      });
   }
 
   function captureCameraPicker() {
@@ -6678,6 +7497,7 @@
      ======================================================================== */
   var scanPaperPhotos = [];
   var scanPaperStream = null;
+  var scanPaperFacing = 'environment'; // 默认后置摄像头
 
   function openScanPaper() {
     scanPaperPhotos = [];
@@ -6728,6 +7548,9 @@
     body += '<button class="feat-btn feat-btn--ghost" id="scanPaperStartBtn" onclick="startScanPaperCamera()" style="display:none;">';
     body += '<svg viewBox="0 0 20 20" style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><rect x="3" y="4" width="14" height="10" rx="1"/><circle cx="10" cy="9" r="2.5"/><line x1="7" y1="17" x2="13" y2="17"/></svg>';
     body += '开启摄像头</button>';
+    body += '<button class="feat-btn feat-btn--ghost" id="scanPaperFlipBtn" onclick="flipScanPaperCamera()" style="display:none;">';
+    body += '<svg viewBox="0 0 20 20" style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><path d="M4 7 L7 4 L7 6 L13 6 L13 4 L16 7 L13 10 L13 8 L7 8 L7 10 Z"/><circle cx="10" cy="14" r="2"/></svg>';
+    body += '翻转摄像头</button>';
     body += '<button class="feat-btn feat-btn--primary" id="scanPaperCaptureBtn" onclick="captureScanPaper()" style="display:none;">';
     body += '<svg viewBox="0 0 20 20" style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><circle cx="10" cy="10" r="6"/><circle cx="10" cy="10" r="2.5" fill="currentColor"/></svg>';
     body += '拍照采集</button>';
@@ -6771,7 +7594,7 @@
       return;
     }
 
-    requestCameraStream().then(function(stream) {
+    requestCameraStreamWithFacing(scanPaperFacing).then(function(stream) {
       scanPaperStream = stream;
       $('#scanPaperPreview').style.display = 'flex';
       var video = $('#scanPaperVideo');
@@ -6781,12 +7604,46 @@
       $('#scanOverlayFrame').style.display = 'block';
       $('#scanOverlayLine').style.display = 'block';
       $('#scanPaperCaptureBtn').style.display = 'inline-flex';
-      if (btn) { btn.textContent = '已开启'; btn.style.background = 'var(--color-success)'; btn.style.color = 'white'; }
-      $('#scanPaperStatus').textContent = '摄像头已开启 · 将试卷对准取景框';
-      showToast('摄像头开启成功，请对准试卷拍照', 'success');
+      $('#scanPaperFlipBtn').style.display = 'inline-flex';
+      if (btn) { btn.style.display = 'none'; }
+      var facingLabel = scanPaperFacing === 'environment' ? '后置' : '前置';
+      $('#scanPaperStatus').textContent = '摄像头已开启（' + facingLabel + '）· 将试卷对准取景框';
+      showToast('摄像头开启成功（' + facingLabel + '），请对准试卷拍照', 'success');
     }).catch(function(err) {
       showToast('无法访问摄像头：' + getCameraErrorMessage(err), 'error');
       if (btn) { btn.disabled = false; btn.textContent = '开启摄像头'; }
+    });
+  }
+
+  /**
+   * 翻转扫描试卷摄像头（前置↔后置）
+   */
+  function flipScanPaperCamera() {
+    scanPaperFacing = scanPaperFacing === 'environment' ? 'user' : 'environment';
+
+    if (scanPaperStream) {
+      scanPaperStream.getTracks().forEach(function(t) { t.stop(); });
+      scanPaperStream = null;
+    }
+
+    var video = $('#scanPaperVideo');
+    video.style.opacity = '0.3';
+
+    requestCameraStreamWithFacing(scanPaperFacing).then(function(stream) {
+      scanPaperStream = stream;
+      video.srcObject = stream;
+      video.style.opacity = '1';
+      var facingLabel = scanPaperFacing === 'environment' ? '后置' : '前置';
+      $('#scanPaperStatus').textContent = '摄像头已开启（' + facingLabel + '）· 将试卷对准取景框';
+      showToast('已切换到' + facingLabel + '摄像头', 'success');
+    }).catch(function(err) {
+      video.style.opacity = '1';
+      showToast('切换摄像头失败：' + getCameraErrorMessage(err), 'error');
+      scanPaperFacing = scanPaperFacing === 'environment' ? 'user' : 'environment';
+      requestCameraStreamWithFacing(scanPaperFacing).then(function(stream) {
+        scanPaperStream = stream;
+        video.srcObject = stream;
+      });
     });
   }
 
@@ -6886,8 +7743,8 @@
     if (allQuestions.length > 0) {
       updateProgress(100, '分析完成！', '共识别到 ' + allQuestions.length + ' 道题目');
 
-      // 合并到题库
-      state.questions = state.questions.concat(allQuestions);
+      // 替换题库（每次分析覆盖之前的数据，避免无限增长）
+      state.questions = allQuestions;
       saveQuestions();
       updateUI();
 
@@ -6899,7 +7756,20 @@
       }, 1000);
     } else {
       hideProgress();
-      showToast('未能从扫描图片中识别出题目，请尝试重新拍摄更清晰的图片', 'warning', 5000);
+      // 统一错误提示
+      showToast('照片分析错误，请重新上传正确或清晰的图片', 'warning', 5000);
+      // 重新打开扫描弹窗让用户重试
+      setTimeout(function() {
+        scanPaperPhotos = [];
+        openScanPaper();
+        // 在弹窗中显示错误提示
+        setTimeout(function() {
+          var statusEl = $('#scanPaperStatus');
+          if (statusEl) {
+            statusEl.innerHTML = '<span style="color:#EF4444;">照片分析错误，请重新上传正确或清晰的图片</span>';
+          }
+        }, 200);
+      }, 500);
     }
 
     // 清空采集数据
@@ -7693,7 +8563,8 @@
       updateUploadProgress(100, '分析完成！', `识别到 ${questions.length} 道题目`);
       setTimeout(() => {
         hideUploadProgress();
-        state.questions = state.questions.concat(questions);
+        // 替换题库（每次分析覆盖之前的数据，避免无限增长）
+        state.questions = questions;
         state.isDemoMode = false;
         saveQuestions();
         clearPendingFiles();
@@ -7752,53 +8623,43 @@
   }
 
   /**
-   * 调用后端分析纯文本内容
+   * 调用后端分析内容（支持纯文本和图片）
+   * 当 content 为 dataURL（data:image/ 开头）时，自动转为 blob 作为 files 发送，后端使用 vision 模式识别图片
+   * 当 content 为纯文本时，作为 texts 发送
    */
   async function analyzeContent(content, contentType) {
     if (!state.apiAvailable) {
-      return await analyzeWithDemo();
+      showToast('请先连接后端服务并登录，再上传试卷进行分析', 'warning', 5000);
+      throw new Error('后端服务未连接，无法分析试卷');
     }
     if (!state.user) {
       openAuthModal('login');
-      throw new Error('请先登录后再分析文本。');
+      throw new Error('请先登录后再分析试卷。');
     }
 
-    updateProgress(70, 'AI正在识别题目...');
-    const formData = new FormData();
+    updateProgress(70, 'AI正在仔细识别题目...');
+
+    var formData = new FormData();
     formData.append('mode', 'default');
-    formData.append('title', contentType === 'text/plain' ? '文本试卷分析' : '试卷分析');
-    formData.append('texts', content);
-    const data = await apiFetch('/api/papers/analyze', {
+
+    // 检测 content 是否为图片 dataURL
+    if (typeof content === 'string' && content.indexOf('data:image/') === 0) {
+      // 图片：转 blob 作为 files 发送，后端使用 vision 模式识别
+      var blob = dataURLtoBlob(content);
+      if (!blob) throw new Error('图片格式无效，无法识别');
+      formData.append('title', '试卷图片识别');
+      formData.append('files', blob, 'paper.jpg');
+    } else {
+      // 纯文本：作为 texts 发送
+      formData.append('title', contentType === 'text/plain' ? '文本试卷分析' : '试卷分析');
+      formData.append('texts', content);
+    }
+
+    var data = await apiFetch('/api/papers/analyze', {
       method: 'POST',
       body: formData,
     });
     return normalizeQuestions(data.result && data.result.questions ? data.result.questions : []);
-  }
-
-  /**
-   * 演示模式分析（从内置数据中随机抽取）
-   */
-  async function analyzeWithDemo() {
-    updateProgress(70, '演示模式：加载模拟数据...');
-
-    // 模拟网络延迟
-    await new Promise(resolve => setTimeout(resolve, 800));
-
-    // 随机抽取 8-15 道题作为"识别结果"
-    const shuffled = [...DEMO_QUESTIONS].sort(() => Math.random() - 0.5);
-    const count = Math.floor(Math.random() * 8) + 8;
-    const selected = shuffled.slice(0, count).map((q, i) => ({
-      ...q,
-      id: Date.now() + i,  // 生成新 ID 避免重复
-    }));
-
-    // 标记演示模式
-    if (!state.isDemoMode) {
-      state.isDemoMode = true;
-      updateDemoBanner();
-    }
-
-    return selected;
   }
 
   /**
@@ -8109,7 +8970,7 @@
         <div class="empty-state">
           <div class="empty-state-icon"><svg viewBox="0 0 24 24"><path d="M4 7 L12 3 L20 7 L12 11 Z"/><path d="M4 7 L4 17 L12 21 L12 11"/><path d="M20 7 L20 17 L12 21"/></svg></div>
           <div class="empty-state-text">暂无题目，请上传试卷</div>
-          <div class="empty-state-hint">点击下方按钮上传试卷或进入演示模式</div>
+          <div class="empty-state-hint">请先上传试卷进行分析</div>
           <button class="empty-state-btn" onclick="switchView('home')">去上传试卷</button>
         </div>
       `;
@@ -8179,6 +9040,7 @@
   }
 
   function getDashboardAverageScore() {
+    // 优先使用学生数据
     if (DEMO_STUDENTS.length > 0) {
       var total = DEMO_STUDENTS.reduce(function(sum, student) {
         return sum + parseFloat(student.avgRate || 0);
@@ -8186,6 +9048,7 @@
       return total / DEMO_STUDENTS.length;
     }
 
+    // 无学生数据时，使用题目平均得分率
     if (state.questions.length > 0) {
       return state.questions.reduce(function(sum, q) {
         return sum + parseFloat(q.scoreRate || 0);
@@ -8203,20 +9066,9 @@
   }
 
   function getDashboardWeakKnowledgeCount() {
+    if (state.questions.length === 0) return 0;
+
     var weakSet = new Set();
-
-    DEMO_STUDENTS.forEach(function(student) {
-      Object.entries(student.kpData || {}).forEach(function(entry) {
-        var kp = entry[0];
-        var rate = parseFloat(entry[1] || 0);
-        if (rate < 70) weakSet.add(kp);
-      });
-    });
-
-    if (weakSet.size > 0 || state.questions.length === 0) {
-      return weakSet.size;
-    }
-
     var kpMap = {};
     state.questions.forEach(function(q) {
       (q.knowledgePoints || []).forEach(function(kp) {
@@ -8236,17 +9088,19 @@
 
   function getDashboardScoreBands() {
     var counts = [0, 0, 0, 0, 0];
-    if (DEMO_STUDENTS.length === 0) return counts;
+    if (DEMO_STUDENTS.length === 0 && state.questions.length === 0) return counts;
 
-    DEMO_STUDENTS.forEach(function(student) {
-      var score = parseFloat(student.avgRate || 0);
-      if (score >= 90) counts[0]++;
-      else if (score >= 80) counts[1]++;
-      else if (score >= 70) counts[2]++;
-      else if (score >= 60) counts[3]++;
-      else counts[4]++;
-    });
-
+    // 优先使用学生数据
+    if (DEMO_STUDENTS.length > 0) {
+      DEMO_STUDENTS.forEach(function(student) {
+        var score = parseFloat(student.avgRate || 0);
+        if (score >= 90) counts[0]++;
+        else if (score >= 80) counts[1]++;
+        else if (score >= 70) counts[2]++;
+        else if (score >= 60) counts[3]++;
+        else counts[4]++;
+      });
+    }
     return counts;
   }
 
@@ -8663,7 +9517,15 @@
      ======================================================================== */
 
   /**
-   * 保存题目到 localStorage
+   * 获取当前用户专属的存储键名（数据与账户绑定）
+   */
+  function getStorageKey() {
+    var userId = state.user && state.user.id ? state.user.id : 'guest';
+    return 'exam_analyzer_data_' + userId;
+  }
+
+  /**
+   * 保存题目到 localStorage（按用户隔离）
    */
   function saveQuestions() {
     try {
@@ -8671,8 +9533,9 @@
         questions: state.questions,
         isDemoMode: state.isDemoMode,
         savedAt: new Date().toISOString(),
+        userId: state.user && state.user.id ? state.user.id : 'guest',
       };
-      localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(data));
+      localStorage.setItem(getStorageKey(), JSON.stringify(data));
     } catch (e) {
       console.error('保存失败:', e);
       showToast('数据保存失败，可能存储空间不足', 'error');
@@ -8680,11 +9543,21 @@
   }
 
   /**
-   * 从 localStorage 加载题目
+   * 从 localStorage 加载题目（按用户隔离）
    */
   function loadQuestions() {
     try {
-      const raw = localStorage.getItem(CONFIG.STORAGE_KEY);
+      // 优先读取当前用户的存储
+      var raw = localStorage.getItem(getStorageKey());
+      if (!raw) {
+        // 兼容旧版数据迁移
+        raw = localStorage.getItem('exam_analyzer_data');
+        if (raw) {
+          // 迁移到用户专属键后删除旧的
+          localStorage.setItem(getStorageKey(), raw);
+          localStorage.removeItem('exam_analyzer_data');
+        }
+      }
       if (!raw) return null;
       return JSON.parse(raw);
     } catch (e) {
@@ -8708,7 +9581,9 @@
         return;
       }
     }
-    localStorage.removeItem(CONFIG.STORAGE_KEY);
+    localStorage.removeItem(getStorageKey());
+    // 同时清理旧的通用键
+    localStorage.removeItem('exam_analyzer_data');
     state.questions = [];
     state.isDemoMode = false;
     state.filteredQuestions = [];
@@ -8762,47 +9637,33 @@
       text.textContent = state.user ? '服务已连接' : '服务已连接 · 未登录';
       settingsStatus.textContent = '已连接';
       settingsStatus.style.color = '#10B981';
-      settingsMode.textContent = state.isDemoMode ? '演示模式' : '正常模式';
+      settingsMode.textContent = '正常模式';
     } catch (error) {
       state.apiAvailable = false;
       dot.className = 'status-dot offline';
       text.textContent = '服务未启动';
       settingsStatus.textContent = '未连接';
       settingsStatus.style.color = '#EF4444';
-      settingsMode.textContent = state.isDemoMode ? '演示模式' : '未连接';
+      settingsMode.textContent = '未连接';
 
       // 如果没有已保存的数据，提示用户
       if (state.questions.length === 0) {
-        showToast('请先启动 Worker 后端服务，或点击"演示模式"体验功能', 'warning', 5000);
+        showToast('后端服务未连接，请确保 Worker 已部署并登录后上传试卷', 'warning', 5000);
       }
     }
   }
 
 
   /* ========================================================================
-     第十六部分：演示模式
+     第十六部分：演示模式（已停用）
      ======================================================================== */
 
   /**
-   * 进入演示模式
+   * 演示模式已停用 — 所有数据来自用户上传的真实试卷
    */
   function enterDemoMode() {
-    // 如果已有数据，先确认
-    if (state.questions.length > 0 && !state.isDemoMode) {
-      if (!confirm('当前题库已有数据，加载演示数据将合并到现有题库中。是否继续？')) {
-        return;
-      }
-    }
-
-    state.isDemoMode = true;
-    // 加载30道演示题目
-    state.questions = [...DEMO_QUESTIONS];
-    saveQuestions();
-    updateDemoBanner();
-    updateUI();
-    showToast('演示模式已启动，已加载30道模拟题目', 'success', 3000);
-    switchView('search');
-    updateSearchViewVisibility();
+    showToast('演示模式已停用，请上传真实试卷进行分析', 'info', 3000);
+    switchView('home');
   }
 
   /**
@@ -8810,15 +9671,10 @@
    */
   function updateDemoBanner() {
     const banner = $('#demoBanner');
-    if (state.isDemoMode) {
-      banner.classList.add('show');
-    } else {
-      banner.classList.remove('show');
-    }
-    // 更新设置中的模式显示
+    if (banner) banner.classList.remove('show');
     const settingsMode = $('#settingsMode');
     if (settingsMode) {
-      settingsMode.textContent = state.isDemoMode ? '演示模式' : (state.apiAvailable ? '正常模式' : '未连接');
+      settingsMode.textContent = state.apiAvailable ? '正常模式' : '未连接';
     }
   }
 
@@ -8942,11 +9798,15 @@
       console.warn('退出登录失败:', error);
     }
     state.user = null;
+    // 清空当前用户数据（切换账户时数据隔离）
+    state.questions = [];
+    state.filteredQuestions = [];
+    state.isDemoMode = false;
     resetStudentsToDemo();
     updateAuthUI();
     if (state.currentView === 'students') renderStudentList();
     updateUI();
-    showToast('已退出登录', 'success');
+    showToast('已退出登录，本地数据已清空', 'success');
   }
 
   async function saveProfile() {
@@ -8981,9 +9841,7 @@
   }
 
   function resetStudentsToDemo() {
-    DEMO_STUDENTS = DEFAULT_STUDENTS.map(function(s) {
-      return { ...s, kpData: { ...(s.kpData || {}) } };
-    });
+    DEMO_STUDENTS = [];
   }
 
   async function loadRemoteStudents() {
@@ -9158,7 +10016,8 @@
         updateProgress(100, '分析完成！', `识别到 ${questions.length} 道题目`);
         setTimeout(() => {
           hideProgress();
-          state.questions = state.questions.concat(questions);
+          // 替换题库（每次分析覆盖之前的数据，避免无限增长）
+          state.questions = questions;
           saveQuestions();
           updateUI();
           showToast(`成功识别 ${questions.length} 道题目！`, 'success');
@@ -9183,23 +10042,9 @@
    * 内置演示学生数据
    * 每个学生包含：姓名、学号、班级、各知识点平均得分率、总题量
    */
-  let DEMO_STUDENTS = [
-    { name: '张明', id: 'S001', class: '初三(1)班', avgRate: 78, totalQuestions: 28,
-      kpData: { '勾股定理': 85, '一次函数': 72, '二次函数': 65, '方程求解': 90, '几何证明': 68, '数据分析': 82 } },
-    { name: '李华', id: 'S002', class: '初三(1)班', avgRate: 65, totalQuestions: 25,
-      kpData: { '勾股定理': 70, '一次函数': 60, '二次函数': 45, '方程求解': 78, '几何证明': 55, '数据分析': 80 } },
-    { name: '王芳', id: 'S003', class: '初三(2)班', avgRate: 88, totalQuestions: 30,
-      kpData: { '勾股定理': 95, '一次函数': 90, '二次函数': 82, '方程求解': 95, '几何证明': 85, '数据分析': 88 } },
-    { name: '刘强', id: 'S004', class: '初三(2)班', avgRate: 52, totalQuestions: 20,
-      kpData: { '勾股定理': 60, '一次函数': 48, '二次函数': 35, '方程求解': 55, '几何证明': 42, '数据分析': 70 } },
-    { name: '陈雨', id: 'S005', class: '初三(1)班', avgRate: 73, totalQuestions: 27,
-      kpData: { '勾股定理': 80, '一次函数': 68, '二次函数': 70, '方程求解': 85, '几何证明': 60, '数据分析': 75 } },
-    { name: '赵磊', id: 'S006', class: '初三(2)班', avgRate: 81, totalQuestions: 29,
-      kpData: { '勾股定理': 88, '一次函数': 75, '二次函数': 78, '方程求解': 92, '几何证明': 72, '数据分析': 80 } },
-  ];
-  const DEFAULT_STUDENTS = DEMO_STUDENTS.map(function(s) {
-    return { ...s, kpData: { ...(s.kpData || {}) } };
-  });
+  // 示例学生数据已移除，所有学生数据均来自用户上传分析的真实试卷
+  let DEMO_STUDENTS = [];
+  const DEFAULT_STUDENTS = [];
 
   // 学生筛选状态
   var studentFilterState = {
@@ -9516,9 +10361,9 @@
     var subEl = document.querySelector('.students-toolbar-sub');
     if (subEl) {
       if (students.length < DEMO_STUDENTS.length) {
-        subEl.innerHTML = '八年级三班 · 筛选出 <strong>' + students.length + '</strong> / ' + DEMO_STUDENTS.length + ' 人';
+        subEl.innerHTML = '筛选出 <strong>' + students.length + '</strong> / ' + DEMO_STUDENTS.length + ' 人';
       } else {
-        subEl.innerHTML = '八年级三班 · 共 <strong>' + students.length + '</strong> 人';
+        subEl.innerHTML = '共 <strong>' + students.length + '</strong> 人';
       }
     }
 
@@ -9526,9 +10371,9 @@
       container.innerHTML = `
         <div class="empty-state">
           <div class="empty-state-icon"><svg viewBox="0 0 24 24"><path d="M4 7 L12 3 L20 7 L12 11 Z"/><path d="M4 7 L4 17 L12 21 L12 11"/><path d="M20 7 L20 17 L12 21"/></svg></div>
-          <div class="empty-state-text">没有符合条件的学生</div>
-          <div class="empty-state-hint">尝试调整筛选条件或添加新学生</div>
-          <button class="empty-state-btn" onclick="resetStudentFilter();renderStudentList();">清除筛选</button>
+          <div class="empty-state-text">暂无学生数据</div>
+          <div class="empty-state-hint">上传并分析试卷后，学生数据将自动生成</div>
+          <button class="empty-state-btn" onclick="switchView('home')">去上传试卷</button>
         </div>
       `;
       return;
@@ -9825,10 +10670,10 @@
         return typeMap[t].errors;
       });
     } else {
-      // 演示默认数据
-      types = ['选择题', '填空题', '解答题', '判断题'];
-      errorRates = [25, 35, 45, 20];
-      errorCounts = [3, 4, 5, 2];
+      // 无数据时显示空状态
+      types = ['暂无数据'];
+      errorRates = [0];
+      errorCounts = [0];
     }
 
     // 从高到低排序（上方错题率最高）
@@ -10019,8 +10864,8 @@
    * 页面加载完成后初始化
    */
   async function init() {
-    // 1. 从 localStorage 加载已保存的数据
-    const saved = loadQuestions();
+    // 1. 从 localStorage 加载已保存的数据（guest 模式下先加载本地缓存）
+    var saved = loadQuestions();
     if (saved && saved.questions && saved.questions.length > 0) {
       state.questions = saved.questions;
       state.isDemoMode = saved.isDemoMode || false;
@@ -10029,6 +10874,9 @@
     // 2. 检测 Worker API 并刷新账号状态
     await checkApiHealth();
     await refreshCurrentUser();
+
+    // 2.5 如果用户已登录，优先使用远程数据；否则保留本地缓存
+    // （refreshCurrentUser 内部已调用 loadRemoteQuestions 覆盖 state.questions）
 
     // 3. 更新 UI
     updateUI();
