@@ -5059,11 +5059,13 @@
     API_BASE: resolveApiBase(),
     STORAGE_KEY: 'exam_analyzer_data',   // localStorage 存储键名
     API_TIMEOUT: 180000,                 // API 超时时间（毫秒）
-    MAX_UPLOAD_FILE_SIZE: 6 * 1024 * 1024,
-    MAX_UPLOAD_TOTAL_SIZE: 24 * 1024 * 1024,
-    IMAGE_COMPRESS_THRESHOLD: 1.5 * 1024 * 1024,
-    IMAGE_MAX_DIMENSION: 1800,
-    IMAGE_JPEG_QUALITY: 0.82,
+    MAX_UPLOAD_FILES: 6,
+    MAX_UPLOAD_FILE_SIZE: 4 * 1024 * 1024,
+    MAX_UPLOAD_TOTAL_SIZE: 8 * 1024 * 1024,
+    MAX_EXTRACTED_PDF_TEXT: 18000,
+    IMAGE_COMPRESS_THRESHOLD: 450 * 1024,
+    IMAGE_MAX_DIMENSION: 1400,
+    IMAGE_JPEG_QUALITY: 0.72,
   };
 
   /* ========================================================================
@@ -7445,7 +7447,7 @@
   /**
    * 拖拽放下文件
    */
-  function handleDrop(event) {
+  async function handleDrop(event) {
     event.preventDefault();
     event.stopPropagation();
     const zone = document.getElementById('uploadZone');
@@ -7455,7 +7457,7 @@
     if (!files || files.length === 0) return;
 
     for (const file of files) {
-      handleFileUpload(file);
+      await handleFileUpload(file);
     }
     switchView('search');
   }
@@ -7463,12 +7465,12 @@
   /**
    * 文件选择处理
    */
-  function handleFileSelect(event) {
+  async function handleFileSelect(event) {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
     for (const file of files) {
-      handleFileUpload(file);
+      await handleFileUpload(file);
     }
     // 清空 input，允许重复选择同一文件
     event.target.value = '';
@@ -7485,6 +7487,11 @@
       return;
     }
 
+    if (state.pendingFiles.length >= CONFIG.MAX_UPLOAD_FILES) {
+      showToast(`一次最多分析 ${CONFIG.MAX_UPLOAD_FILES} 个文件，请先分析当前队列后再继续上传`, 'warning', 5000);
+      return;
+    }
+
     let uploadFile = file;
     if (file.type.startsWith('image/') && file.size > CONFIG.IMAGE_COMPRESS_THRESHOLD) {
       showToast(`正在压缩 ${file.name}，稍等一下`, 'info', 1800);
@@ -7498,7 +7505,7 @@
     }
 
     if (uploadFile.size > CONFIG.MAX_UPLOAD_FILE_SIZE) {
-      showToast(`文件 ${file.name} 超过 6MB，请压缩后重试`, 'warning', 4000);
+      showToast(`文件 ${file.name} 超过 ${formatFileSize(CONFIG.MAX_UPLOAD_FILE_SIZE)}，请压缩后重试`, 'warning', 4000);
       return;
     }
 
@@ -7636,6 +7643,11 @@
       return;
     }
 
+    if (state.pendingFiles.length > CONFIG.MAX_UPLOAD_FILES) {
+      showToast(`一次最多分析 ${CONFIG.MAX_UPLOAD_FILES} 个文件，请减少页数后重试`, 'warning', 5000);
+      return;
+    }
+
     const totalUploadSize = state.pendingFiles.reduce((sum, file) => sum + file.size, 0);
     if (totalUploadSize > CONFIG.MAX_UPLOAD_TOTAL_SIZE) {
       showToast(`本次待分析文件总大小超过 ${formatFileSize(CONFIG.MAX_UPLOAD_TOTAL_SIZE)}，请减少页数或压缩后重试`, 'warning', 5000);
@@ -7660,7 +7672,7 @@
             return '';
           });
           if (pdfText.trim()) {
-            formData.append('texts', pdfText.trim());
+            formData.append('texts', pdfText.trim().slice(0, CONFIG.MAX_EXTRACTED_PDF_TEXT));
           }
         }
       }

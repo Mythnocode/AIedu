@@ -67,8 +67,9 @@ type StudentPayload = {
   kpData?: unknown;
 };
 
-const MAX_FILES = 12;
-const MAX_FILE_SIZE = 6 * 1024 * 1024;
+const MAX_FILES = 6;
+const MAX_FILE_SIZE = 4 * 1024 * 1024;
+const MAX_TOTAL_FILE_SIZE = 8 * 1024 * 1024;
 const MAX_ANALYSIS_TEXT_LENGTH = 18000;
 const SESSION_COOKIE = 'exam_analyzer_session';
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
@@ -314,6 +315,11 @@ async function handleAnalyzePaper(
 
   if (files.length > MAX_FILES) {
     throw new HttpError(400, `一次最多分析 ${MAX_FILES} 个文件。`);
+  }
+
+  const totalFileSize = files.reduce((sum, file) => sum + file.size, 0);
+  if (totalFileSize > MAX_TOTAL_FILE_SIZE) {
+    throw new HttpError(400, '本次待分析文件总大小超过 8MB，请减少页数或压缩后重试。');
   }
 
   for (const file of files) {
@@ -961,7 +967,7 @@ async function logUsage(
 
 function validateUploadedFile(file: File): void {
   if (file.size > MAX_FILE_SIZE) {
-    throw new HttpError(400, `文件 ${file.name || ''} 超过 6MB，请压缩后重试。`);
+    throw new HttpError(400, `文件 ${file.name || ''} 超过 4MB，请压缩后重试。`);
   }
 
   const supported = file.type.startsWith('image/') || file.type === 'application/pdf';
