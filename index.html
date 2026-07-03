@@ -5058,7 +5058,7 @@
   const CONFIG = {
     API_BASE: resolveApiBase(),
     STORAGE_KEY: 'exam_analyzer_data',   // localStorage 存储键名
-    API_TIMEOUT: 180000,                 // API 超时时间（毫秒）
+    API_TIMEOUT: 300000,                 // API 超时时间（毫秒）5 分钟
     MAX_UPLOAD_FILES: 6,
     MAX_UPLOAD_FILE_SIZE: 4 * 1024 * 1024,
     MAX_UPLOAD_TOTAL_SIZE: 8 * 1024 * 1024,
@@ -7677,7 +7677,7 @@
         }
       }
 
-      updateUploadProgress(48, mode === 'default' ? '正在执行百度OCR + DeepSeek分析...' : '正在调用GPT多模态模型...', '批量试卷可能需要更久，页面会保持可见');
+      updateUploadProgress(48, mode === 'default' ? '正在执行百度OCR + DeepSeek分析...' : '正在执行GPT图片识别 + DeepSeek分析...', '批量试卷可能需要更久，页面会保持可见');
       const data = await apiFetch('/api/papers/analyze', {
         method: 'POST',
         body: formData,

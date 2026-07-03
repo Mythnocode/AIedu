@@ -338,8 +338,11 @@ async function handleAnalyzePaper(
     provider = 'baidu-ocr+deepseek';
   } else {
     assertOpenAiConfigured(env);
-    result = await analyzeWithOpenAI(files, textParts, env);
-    provider = 'openai-multimodal';
+    assertDeepSeekConfigured(env);
+    const extractedText = await extractTextWithGPTVision(files, textParts, env);
+    result = await analyzeWithDeepSeek(extractedText, env);
+    result.originalTextPreview = extractedText.slice(0, 1200);
+    provider = 'gpt-vision+deepseek';
   }
 
   const paper = await savePaperResult(env, user, {
@@ -376,84 +379,63 @@ async function buildDefaultAnalysisText(files: File[], textParts: string[], env:
   return combined;
 }
 
-async function analyzeWithOpenAI(files: File[], textParts: string[], env: Env): Promise<AnalysisResult> {
-  const content: Array<
-    | { type: 'text'; text: string }
-    | { type: 'image_url'; image_url: { url: string; detail: 'high' } }
-  > = [
-    {
-      type: 'text',
-      text: [
-        '你是面向中小学教师的试卷分析助手。',
-        '请直接根据上传的试卷图片或文本识别题目并分析试卷，严格输出 JSON 对象，不要输出 Markdown。',
-        'JSON 字段必须包含 summary, subject, grade, questionCount, knowledgeCoverage, difficultyDistribution, questionTypes, weakPoints, lectureSuggestions, questions。',
-        'questions 是题目数组，每项包含 type, knowledgePoints, difficulty, score, question, answer。',
-        'difficulty 只能使用 简单、中等、困难；type 优先使用 选择题、填空题、解答题、判断题、其他。',
-        '如果缺少分值，请给出合理估计；不要输出或估计得分率，得分率只属于阅卷结果，不属于试卷结构分析；不要评价图片质量或识别过程。',
-      ].join('\n'),
-    },
-  ];
-
-  if (textParts.length > 0) {
-    content.push({ type: 'text', text: `已提取文本：\n${textParts.join('\n\n---\n\n').slice(0, MAX_ANALYSIS_TEXT_LENGTH)}` });
-  }
+async function extractTextWithGPTVision(files: File[], textParts: string[], env: Env): Promise<string> {
+  const parts = [...textParts];
 
   for (const file of files) {
     if (!file.type.startsWith('image/')) continue;
+
     const imageBase64 = await fileToBase64(file);
-    content.push({
-      type: 'image_url',
-      image_url: {
-        url: `data:${file.type || 'image/jpeg'};base64,${imageBase64}`,
-        detail: 'low',
+    const mimeType = file.type || 'image/jpeg';
+    const dataUrl = `data:${mimeType};base64,${imageBase64}`;
+
+    const response = await fetch(`${(env.GPT_API_BASE || 'https://geekspace.cloud/v1').replace(/\/+$/, '')}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.GEEKSPACE_API_KEY || env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({
+        model: env.OPENAI_MODEL || 'gpt-5.5',
+        temperature: 0.1,
+        messages: [
+          {
+            role: 'system',
+            content: '你只输出识别出的文字内容，不要进行任何分析、评价或补充。',
+          },
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: '请识别并提取这张试卷图片中的所有文字内容，保持原有的格式和排版结构，包括题目、选项、分值、公式等。直接输出文字，不要加任何说明。' },
+              { type: 'image_url', image_url: { url: dataUrl } },
+            ],
+          },
+        ],
+      }),
     });
+
+    const payload = (await response.json().catch(() => null)) as {
+      choices?: Array<{ message?: { content?: string } }>;
+      error?: { message?: string };
+    } | null;
+
+    if (!response.ok) {
+      const errMsg = payload?.error?.message || response.statusText;
+      throw new Error(`GPT 图片识别失败：${errMsg.slice(0, 100)}`);
+    }
+
+    const text = payload?.choices?.[0]?.message?.content;
+    if (text) {
+      parts.push(text.trim());
+    }
   }
 
-  if (content.length === 1) {
-    throw new HttpError(400, '多模态模型需要图片，或可提取文字的 PDF 文本。');
+  const combined = parts.join('\n\n---\n\n').trim();
+  if (!combined) {
+    throw new Error('多模态方式需要上传试卷图片或可提取文字的 PDF。');
   }
 
-  const apiBase = (env.GPT_API_BASE || 'https://geekspace.cloud/v1').replace(/\/+$/, '');
-  const apiKey = env.GEEKSPACE_API_KEY || env.OPENAI_API_KEY;
-
-  const response = await fetch(`${apiBase}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: env.OPENAI_MODEL || 'gpt-5.5',
-      temperature: 0.2,
-      response_format: { type: 'json_object' },
-      messages: [
-        {
-          role: 'system',
-          content: '你只输出符合要求的 JSON 对象，字段缺失时使用合理默认值。',
-        },
-        { role: 'user', content },
-      ],
-    }),
-  });
-
-  const payload = (await response.json().catch(() => null)) as {
-    choices?: Array<{ message?: { content?: string } }>;
-    error?: { message?: string };
-  } | null;
-
-  if (!response.ok) {
-    throw new Error(`多模态分析失败：${payload?.error?.message || response.statusText}`);
-  }
-
-  const text = payload?.choices?.[0]?.message?.content;
-  if (!text) {
-    throw new Error('多模态模型未返回有效结果。');
-  }
-
-  const result = normalizeAnalysis(parseJsonObject(text));
-  result.originalTextPreview = textParts.join('\n\n').slice(0, 1200);
-  return result;
+  return combined.length > MAX_ANALYSIS_TEXT_LENGTH ? combined.slice(0, MAX_ANALYSIS_TEXT_LENGTH) : combined;
 }
 
 async function handleListQuestions(env: Env, corsHeaders: HeadersInit, user: AuthUser): Promise<Response> {
