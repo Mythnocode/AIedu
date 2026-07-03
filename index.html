@@ -7225,8 +7225,6 @@
       card.className = 'question-card';
       card.style.animationDelay = Math.min(index * 0.05, 0.5) + 's';
 
-      var rate = parseFloat(q.scoreRate || 0);
-      var rateColor = getScoreRateColor(rate);
       var kpTags = (q.knowledgePoints || []).map(function(kp) {
         return '<span class="question-kp-tag">' + kp + '</span>';
       }).join('');
@@ -7236,12 +7234,6 @@
           <span class="question-type-tag" style="background:var(--color-primary-light);color:var(--color-primary);">${q.type || '未知'}</span>
           <span class="question-score">满分：<strong>${q.maxScore || 0}</strong>分</span>
           ${q.difficulty ? '<span class="question-kp-tag">' + q.difficulty + '</span>' : ''}
-          <span class="question-rate">
-            得分率：<strong style="color:${rateColor}">${rate}%</strong>
-            <div class="question-rate-bar">
-              <div class="question-rate-fill" style="width:${rate}%;background:${rateColor};"></div>
-            </div>
-          </span>
         </div>
         <div class="question-card-body">${q.question || ''}</div>
         ${q.answer ? '<div class="question-card-answer"><strong>答案：</strong>' + q.answer + '</div>' : ''}
@@ -8018,7 +8010,6 @@
 
       const typeColor = TYPE_COLORS[q.type] || TYPE_COLORS['其他'];
       const diffColor = DIFFICULTY_COLORS[q.difficulty] || DIFFICULTY_COLORS['中等'];
-      const rateColor = getScoreRateColor(q.scoreRate);
 
       // 题干摘要（前30字）
       const summary = q.question.length > 30
@@ -8040,12 +8031,6 @@
             ${q.difficulty}
           </span>
           <span class="question-score">分值：<strong>${q.score}</strong>分</span>
-          <span class="question-rate">
-            得分率：<strong style="color:${rateColor}">${q.scoreRate}%</strong>
-            <div class="question-rate-bar">
-              <div class="question-rate-fill" style="width:${q.scoreRate}%;background:${rateColor};"></div>
-            </div>
-          </span>
         </div>
         <div class="question-content" title="${q.question.replace(/"/g, '&quot;')}">
           ${summary}
