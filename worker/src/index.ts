@@ -3,7 +3,9 @@ type Env = {
   BAIDU_OCR_API_KEY?: string;
   BAIDU_OCR_SECRET_KEY?: string;
   DEEPSEEK_API_KEY?: string;
+  GEEKSPACE_API_KEY?: string;
   OPENAI_API_KEY?: string;
+  GPT_API_BASE?: string;
   DEEPSEEK_MODEL?: string;
   OPENAI_MODEL?: string;
   ALLOWED_ORIGIN?: string;
@@ -386,14 +388,17 @@ async function analyzeWithOpenAI(files: File[], textParts: string[], env: Env): 
     throw new HttpError(400, '多模态模型需要图片，或可提取文字的 PDF 文本。');
   }
 
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+  const apiBase = (env.GPT_API_BASE || 'https://geekspace.cloud/v1').replace(/\/+$/, '');
+  const apiKey = env.GEEKSPACE_API_KEY || env.OPENAI_API_KEY;
+
+  const response = await fetch(`${apiBase}/chat/completions`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${env.OPENAI_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: env.OPENAI_MODEL || 'gpt-4.1-mini',
+      model: env.OPENAI_MODEL || 'gpt-5.5',
       temperature: 0.2,
       response_format: { type: 'json_object' },
       messages: [
@@ -940,7 +945,7 @@ function assertDeepSeekConfigured(env: Env): void {
 }
 
 function assertOpenAiConfigured(env: Env): void {
-  assertKeys([['OPENAI_API_KEY', env.OPENAI_API_KEY]]);
+  assertKeys([['GEEKSPACE_API_KEY 或 OPENAI_API_KEY', env.GEEKSPACE_API_KEY || env.OPENAI_API_KEY]]);
 }
 
 function assertKeys(entries: Array<[string, string | undefined]>): void {

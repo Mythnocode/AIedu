@@ -23,7 +23,7 @@ copy worker\.dev.vars.example worker\.dev.vars
 BAIDU_OCR_API_KEY=your_baidu_ocr_api_key
 BAIDU_OCR_SECRET_KEY=your_baidu_ocr_secret_key
 DEEPSEEK_API_KEY=your_deepseek_api_key
-OPENAI_API_KEY=your_openai_api_key
+GEEKSPACE_API_KEY=your_geekspace_api_key
 ALLOWED_ORIGIN=http://localhost:5500
 ```
 
@@ -81,7 +81,7 @@ cd worker
 npx wrangler secret put BAIDU_OCR_API_KEY
 npx wrangler secret put BAIDU_OCR_SECRET_KEY
 npx wrangler secret put DEEPSEEK_API_KEY
-npx wrangler secret put OPENAI_API_KEY
+npx wrangler secret put GEEKSPACE_API_KEY
 ```
 
 设置完密钥后重新部署：
