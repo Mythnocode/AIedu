@@ -4156,7 +4156,7 @@
               </svg>
             </div>
             <div class="home-bubble-text">
-              <div class="home-bubble-num">48<span class="unit">人</span></div>
+              <div class="home-bubble-num">0<span class="unit">人</span></div>
               <div class="home-bubble-label">班级人数</div>
             </div>
           </div>
@@ -4173,7 +4173,7 @@
               </svg>
             </div>
             <div class="home-bubble-text">
-              <div class="home-bubble-num">82.5<span class="unit">分</span></div>
+              <div class="home-bubble-num">0.0<span class="unit">分</span></div>
               <div class="home-bubble-label">平均分</div>
             </div>
           </div>
@@ -4188,7 +4188,7 @@
               </svg>
             </div>
             <div class="home-bubble-text">
-              <div class="home-bubble-num">37<span class="unit">题</span></div>
+              <div class="home-bubble-num">0<span class="unit">题</span></div>
               <div class="home-bubble-label">错题集</div>
             </div>
           </div>
@@ -4205,7 +4205,7 @@
               </svg>
             </div>
             <div class="home-bubble-text">
-              <div class="home-bubble-num">5<span class="unit">个</span></div>
+              <div class="home-bubble-num">0<span class="unit">个</span></div>
               <div class="home-bubble-label">待补知识点</div>
             </div>
           </div>
@@ -8068,6 +8068,124 @@
     $('#navQuestionCount').style.display = state.questions.length > 0 ? 'inline-block' : 'none';
   }
 
+  function getDashboardStudentCount() {
+    return DEMO_STUDENTS.length;
+  }
+
+  function getDashboardAverageScore() {
+    if (DEMO_STUDENTS.length > 0) {
+      var total = DEMO_STUDENTS.reduce(function(sum, student) {
+        return sum + parseFloat(student.avgRate || 0);
+      }, 0);
+      return total / DEMO_STUDENTS.length;
+    }
+
+    if (state.questions.length > 0) {
+      return state.questions.reduce(function(sum, q) {
+        return sum + parseFloat(q.scoreRate || 0);
+      }, 0) / state.questions.length;
+    }
+
+    return 0;
+  }
+
+  function getDashboardWrongQuestionCount() {
+    if (state.questions.length === 0) return 0;
+    return state.questions.filter(function(q) {
+      return parseFloat(q.scoreRate || 0) < 60;
+    }).length;
+  }
+
+  function getDashboardWeakKnowledgeCount() {
+    var weakSet = new Set();
+
+    DEMO_STUDENTS.forEach(function(student) {
+      Object.entries(student.kpData || {}).forEach(function(entry) {
+        var kp = entry[0];
+        var rate = parseFloat(entry[1] || 0);
+        if (rate < 70) weakSet.add(kp);
+      });
+    });
+
+    if (weakSet.size > 0 || state.questions.length === 0) {
+      return weakSet.size;
+    }
+
+    var kpMap = {};
+    state.questions.forEach(function(q) {
+      (q.knowledgePoints || []).forEach(function(kp) {
+        if (!kpMap[kp]) kpMap[kp] = { sum: 0, cnt: 0 };
+        kpMap[kp].sum += parseFloat(q.scoreRate || 0);
+        kpMap[kp].cnt++;
+      });
+    });
+
+    Object.keys(kpMap).forEach(function(kp) {
+      var avg = kpMap[kp].sum / kpMap[kp].cnt;
+      if (avg < 70) weakSet.add(kp);
+    });
+
+    return weakSet.size;
+  }
+
+  function getDashboardScoreBands() {
+    var counts = [0, 0, 0, 0, 0];
+    if (DEMO_STUDENTS.length === 0) return counts;
+
+    DEMO_STUDENTS.forEach(function(student) {
+      var score = parseFloat(student.avgRate || 0);
+      if (score >= 90) counts[0]++;
+      else if (score >= 80) counts[1]++;
+      else if (score >= 70) counts[2]++;
+      else if (score >= 60) counts[3]++;
+      else counts[4]++;
+    });
+
+    return counts;
+  }
+
+  function getDashboardKnowledgeAverages() {
+    var kpMap = {};
+
+    DEMO_STUDENTS.forEach(function(student) {
+      Object.entries(student.kpData || {}).forEach(function(entry) {
+        var kp = entry[0];
+        var rate = parseFloat(entry[1]);
+        if (!kp || isNaN(rate)) return;
+        if (!kpMap[kp]) kpMap[kp] = { sum: 0, count: 0 };
+        kpMap[kp].sum += rate;
+        kpMap[kp].count++;
+      });
+    });
+
+    if (Object.keys(kpMap).length === 0) {
+      state.questions.forEach(function(q) {
+        (q.knowledgePoints || []).forEach(function(kp) {
+          if (!kpMap[kp]) kpMap[kp] = { sum: 0, count: 0 };
+          kpMap[kp].sum += parseFloat(q.scoreRate || 0);
+          kpMap[kp].count++;
+        });
+      });
+    }
+
+    var combined = Object.keys(kpMap).map(function(kp) {
+      var item = kpMap[kp];
+      return {
+        name: kp,
+        rate: item.count > 0 ? Math.round(item.sum / item.count * 10) / 10 : 0
+      };
+    });
+
+    if (combined.length > 8) {
+      combined = combined.sort(function(a, b) { return a.rate - b.rate; }).slice(0, 8);
+    }
+
+    return {
+      names: combined.map(function(item) { return item.name; }),
+      rates: combined.map(function(item) { return item.rate; })
+    };
+  }
+
 
   /* ========================================================================
      第十一部分：数据看板 - 图表渲染
@@ -8721,6 +8839,7 @@
     resetStudentsToDemo();
     updateAuthUI();
     if (state.currentView === 'students') renderStudentList();
+    updateUI();
     showToast('已退出登录', 'success');
   }
 
@@ -8768,6 +8887,7 @@
       if (Array.isArray(data.students)) {
         DEMO_STUDENTS = data.students.map(normalizeStudent);
         if (state.currentView === 'students') renderStudentList();
+        updateUI();
       }
     } catch (error) {
       console.warn('远程学生列表加载失败:', error);
@@ -8838,39 +8958,15 @@
     // 更新导航栏角标
     updateStats();
 
-    // 更新首页气泡数据（根据题库动态计算）
-    if (state.questions.length > 0) {
-      // 错题数：得分率 < 60% 的题目
-      var wrongCount = state.questions.filter(function(q) {
-        var rate = parseFloat(q.scoreRate || 0);
-        return rate < 60;
-      }).length;
-      // 平均得分率
-      var avgRate = state.questions.reduce(function(s, q) {
-        return s + parseFloat(q.scoreRate || 0);
-      }, 0) / state.questions.length;
-      // 待补知识点：平均得分率 < 70% 的知识点
-      var kpMap = {};
-      state.questions.forEach(function(q) {
-        (q.knowledgePoints || []).forEach(function(kp) {
-          if (!kpMap[kp]) kpMap[kp] = { sum: 0, cnt: 0 };
-          kpMap[kp].sum += parseFloat(q.scoreRate || 0);
-          kpMap[kp].cnt++;
-        });
-      });
-      var weakKp = 0;
-      Object.keys(kpMap).forEach(function(kp) {
-        var avg = kpMap[kp].sum / kpMap[kp].cnt;
-        if (avg < 70) weakKp++;
-      });
-
-      var bubbleWrong = document.querySelector('.home-bubble--orange .home-bubble-num');
-      var bubbleAvg = document.querySelector('.home-bubble--green .home-bubble-num');
-      var bubbleWeak = document.querySelector('.home-bubble--purple .home-bubble-num');
-      if (bubbleWrong) bubbleWrong.innerHTML = wrongCount + '<span class="unit">题</span>';
-      if (bubbleAvg) bubbleAvg.innerHTML = avgRate.toFixed(1) + '<span class="unit">分</span>';
-      if (bubbleWeak) bubbleWeak.innerHTML = weakKp + '<span class="unit">个</span>';
-    }
+    // 更新首页气泡数据（账号学生 + 题库动态计算）
+    var bubbleStudent = document.querySelector('.home-bubble--blue .home-bubble-num');
+    var bubbleAvg = document.querySelector('.home-bubble--green .home-bubble-num');
+    var bubbleWrong = document.querySelector('.home-bubble--orange .home-bubble-num');
+    var bubbleWeak = document.querySelector('.home-bubble--purple .home-bubble-num');
+    if (bubbleStudent) bubbleStudent.innerHTML = getDashboardStudentCount() + '<span class="unit">人</span>';
+    if (bubbleAvg) bubbleAvg.innerHTML = getDashboardAverageScore().toFixed(1) + '<span class="unit">分</span>';
+    if (bubbleWrong) bubbleWrong.innerHTML = getDashboardWrongQuestionCount() + '<span class="unit">题</span>';
+    if (bubbleWeak) bubbleWeak.innerHTML = getDashboardWeakKnowledgeCount() + '<span class="unit">个</span>';
 
     // 更新搜索视图
     updateKnowledgeDropdowns();
@@ -9293,6 +9389,7 @@
 
     closeFeature();
     renderStudentList();
+    updateUI();
     showToast('已添加并保存到账号：' + name + '（' + classVal + '）', 'success');
   }
 
@@ -9400,26 +9497,10 @@
     var ranges = ['90-100分', '80-89分', '70-79分', '60-69分', '60分以下'];
     var counts;
 
-    if (state.questions.length > 0) {
-      // 有数据：根据平均得分率推断分布
-      var avgRate = state.questions.reduce(function(s, q) {
-        return s + parseFloat(q.scoreRate || 0);
-      }, 0) / state.questions.length;
-
-      // 班级48人，根据平均分按正态分布近似
-      var total = 48;
-      if (avgRate >= 85) {
-        counts = [12, 18, 10, 5, 3];
-      } else if (avgRate >= 75) {
-        counts = [8, 16, 14, 6, 4];
-      } else if (avgRate >= 65) {
-        counts = [5, 12, 16, 9, 6];
-      } else {
-        counts = [3, 8, 14, 12, 11];
-      }
+    if (DEMO_STUDENTS.length > 0) {
+      counts = getDashboardScoreBands();
     } else {
-      // 无数据：演示默认分布
-      counts = [5, 14, 16, 8, 5];
+      counts = [0, 0, 0, 0, 0];
     }
 
     // 柱状图颜色：从高到低为绿→蓝→黄→橙→红
@@ -9500,24 +9581,16 @@
     state.charts.homeTrend = chart;
 
     // 计算当前平均分
-    var currentAvg;
-    if (state.questions.length > 0) {
-      var avgRate = state.questions.reduce(function(s, q) {
-        return s + parseFloat(q.scoreRate || 0);
-      }, 0) / state.questions.length;
-      currentAvg = avgRate;
-    } else {
-      currentAvg = 82.5;
-    }
+    var currentAvg = getDashboardAverageScore();
 
     // 模拟近5次考试趋势数据（围绕当前平均分波动）
-    var trendData = [
-      Math.round((currentAvg - 6) * 10) / 10,
-      Math.round((currentAvg - 3) * 10) / 10,
-      Math.round((currentAvg - 1) * 10) / 10,
-      Math.round((currentAvg + 1.5) * 10) / 10,
-      Math.round(currentAvg * 10) / 10
-    ];
+    var trendData = DEMO_STUDENTS.length > 0 ? [
+      Math.max(0, Math.round((currentAvg - 6) * 10) / 10),
+      Math.max(0, Math.round((currentAvg - 3) * 10) / 10),
+      Math.max(0, Math.round((currentAvg - 1) * 10) / 10),
+      Math.max(0, Math.round((currentAvg + 1.5) * 10) / 10),
+      Math.max(0, Math.round(currentAvg * 10) / 10)
+    ] : [0, 0, 0, 0, 0];
 
     var examNames = ['第1次月考', '第2次月考', '期中考试', '第3次月考', '本次考试'];
 
@@ -9550,7 +9623,7 @@
         type: 'value',
         name: '平均分',
         nameTextStyle: { color: '#94A3B8', fontSize: 11 },
-        min: Math.floor(Math.min.apply(null, trendData) - 5),
+        min: Math.max(0, Math.floor(Math.min.apply(null, trendData) - 5)),
         max: 100,
         axisLine: { show: false },
         axisTick: { show: false },
@@ -9743,41 +9816,17 @@
     // 销毁旧实例
     if (state.charts.homeRadar) state.charts.homeRadar.dispose();
 
+    var knowledgeData = getDashboardKnowledgeAverages();
+    var kpNames = knowledgeData.names;
+    var kpRates = knowledgeData.rates;
+
+    if (kpNames.length === 0) {
+      el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#94A3B8;font-size:14px;">暂无知识点数据</div>';
+      return;
+    }
+
     var chart = echarts.init(el);
     state.charts.homeRadar = chart;
-
-    // 统计各知识点平均得分率
-    var kpMap = {};
-    state.questions.forEach(function(q) {
-      (q.knowledgePoints || []).forEach(function(kp) {
-        if (!kpMap[kp]) kpMap[kp] = { total: 0, sum: 0 };
-        kpMap[kp].total++;
-        kpMap[kp].sum += parseFloat(q.scoreRate || 0);
-      });
-    });
-
-    var kpNames = Object.keys(kpMap);
-    var kpRates;
-
-    if (kpNames.length >= 3) {
-      kpRates = kpNames.map(function(kp) {
-        var d = kpMap[kp];
-        return Math.round(d.sum / d.total * 10) / 10;
-      });
-      // 最多取8个知识点
-      if (kpNames.length > 8) {
-        // 按得分率排序，取最低的8个（最需关注）
-        var combined = kpNames.map(function(kp, i) {
-          return { name: kp, rate: kpRates[i] };
-        }).sort(function(a, b) { return a.rate - b.rate; }).slice(0, 8);
-        kpNames = combined.map(function(d) { return d.name; });
-        kpRates = combined.map(function(d) { return d.rate; });
-      }
-    } else {
-      // 演示默认数据
-      kpNames = ['勾股定理', '一次函数', '数据分析', '方程求解', '几何证明', '综合应用'];
-      kpRates = [78, 85, 72, 68, 80, 65];
-    }
 
     chart.setOption({
       tooltip: {
