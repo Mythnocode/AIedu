@@ -8616,9 +8616,13 @@
       updateAuthUI();
       if (state.user) {
         await loadRemoteQuestions();
+        await loadRemoteStudents();
+      } else {
+        resetStudentsToDemo();
       }
     } catch (error) {
       state.user = null;
+      resetStudentsToDemo();
       updateAuthUI();
     }
   }
@@ -8707,6 +8711,7 @@
       closeAuthModal();
       updateAuthUI();
       await loadRemoteQuestions();
+      await loadRemoteStudents();
       showToast(state.authMode === 'register' ? '注册成功，已登录' : '登录成功', 'success');
     } catch (error) {
       showToast(error.message, 'error', 4000);
@@ -8720,7 +8725,9 @@
       console.warn('退出登录失败:', error);
     }
     state.user = null;
+    resetStudentsToDemo();
     updateAuthUI();
+    if (state.currentView === 'students') renderStudentList();
     showToast('已退出登录', 'success');
   }
 
@@ -8753,6 +8760,37 @@
     } catch (error) {
       console.warn('远程题库加载失败:', error);
     }
+  }
+
+  function resetStudentsToDemo() {
+    DEMO_STUDENTS = DEFAULT_STUDENTS.map(function(s) {
+      return { ...s, kpData: { ...(s.kpData || {}) } };
+    });
+  }
+
+  async function loadRemoteStudents() {
+    if (!state.user || !state.apiAvailable) return;
+    try {
+      const data = await apiFetch('/api/students', { method: 'GET' });
+      if (Array.isArray(data.students)) {
+        DEMO_STUDENTS = data.students.map(normalizeStudent);
+        if (state.currentView === 'students') renderStudentList();
+      }
+    } catch (error) {
+      console.warn('远程学生列表加载失败:', error);
+    }
+  }
+
+  function normalizeStudent(student) {
+    return {
+      dbId: student.dbId || '',
+      name: student.name || '',
+      id: student.id || student.studentNo || '',
+      class: student.class || student.className || '',
+      avgRate: Math.max(0, Math.min(100, parseInt(student.avgRate || 0))),
+      totalQuestions: Math.max(0, parseInt(student.totalQuestions || 0)),
+      kpData: student.kpData && typeof student.kpData === 'object' ? student.kpData : {},
+    };
   }
 
 
@@ -8964,6 +9002,9 @@
     { name: '赵磊', id: 'S006', class: '初三(2)班', avgRate: 81, totalQuestions: 29,
       kpData: { '勾股定理': 88, '一次函数': 75, '二次函数': 78, '方程求解': 92, '几何证明': 72, '数据分析': 80 } },
   ];
+  const DEFAULT_STUDENTS = DEMO_STUDENTS.map(function(s) {
+    return { ...s, kpData: { ...(s.kpData || {}) } };
+  });
 
   // 学生筛选状态
   var studentFilterState = {
@@ -9134,9 +9175,9 @@
     classes.forEach(function(c) {
       body += '<option value="' + c + '">' + c + '</option>';
     });
-    body += '<option value="new">+ 新建班级...</option>';
+    body += '<option value="new"' + (classes.length === 0 ? ' selected' : '') + '>+ 新建班级...</option>';
     body += '</select>';
-    body += '<input type="text" class="add-student-input" id="newStudentClassCustom" placeholder="输入新班级名称" style="display:none;margin-top:8px;" />';
+    body += '<input type="text" class="add-student-input" id="newStudentClassCustom" placeholder="输入新班级名称" style="' + (classes.length === 0 ? 'display:block;' : 'display:none;') + 'margin-top:8px;" />';
     body += '</div>';
 
     // 平均得分率
@@ -9188,7 +9229,17 @@
   /**
    * 提交新学生
    */
-  function submitNewStudent() {
+  async function submitNewStudent() {
+    if (!state.user) {
+      openAuthModal('login');
+      showToast('请先登录，学生会保存到对应账号', 'warning', 4000);
+      return;
+    }
+    if (!state.apiAvailable) {
+      showToast('后端服务未连接，暂时无法保存学生', 'error', 4000);
+      return;
+    }
+
     var name = document.getElementById('newStudentName').value.trim();
     var id = document.getElementById('newStudentId').value.trim();
     var classVal = document.getElementById('newStudentClass').value;
@@ -9226,19 +9277,30 @@
       }
     });
 
-    // 添加学生
-    DEMO_STUDENTS.push({
+    var studentPayload = {
       name: name,
       id: id,
       class: classVal,
       avgRate: avgRate,
       totalQuestions: Math.floor(Math.random() * 15 + 20),
       kpData: kpData
-    });
+    };
+
+    try {
+      const data = await apiFetch('/api/students', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(studentPayload),
+      });
+      DEMO_STUDENTS.push(normalizeStudent(data.student || studentPayload));
+    } catch (error) {
+      showToast('学生保存失败：' + error.message, 'error', 5000);
+      return;
+    }
 
     closeFeature();
     renderStudentList();
-    showToast('已添加学生：' + name + '（' + classVal + '）', 'success');
+    showToast('已添加并保存到账号：' + name + '（' + classVal + '）', 'success');
   }
 
   /**

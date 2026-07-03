@@ -58,6 +58,15 @@ type StoredPaper = {
   questionCount: number;
 };
 
+type StudentPayload = {
+  id?: unknown;
+  name?: unknown;
+  class?: unknown;
+  avgRate?: unknown;
+  totalQuestions?: unknown;
+  kpData?: unknown;
+};
+
 const MAX_FILES = 12;
 const MAX_FILE_SIZE = 6 * 1024 * 1024;
 const MAX_ANALYSIS_TEXT_LENGTH = 18000;
@@ -115,6 +124,16 @@ export default {
       if (url.pathname === '/api/questions/clear' && request.method === 'POST') {
         const user = await requireUser(request, env);
         return await handleClearQuestions(env, corsHeaders, user);
+      }
+
+      if (url.pathname === '/api/students' && request.method === 'GET') {
+        const user = await requireUser(request, env);
+        return await handleListStudents(env, corsHeaders, user);
+      }
+
+      if (url.pathname === '/api/students' && request.method === 'POST') {
+        const user = await requireUser(request, env);
+        return await handleCreateStudent(request, env, corsHeaders, user);
       }
 
       return json({ message: 'Not found' }, 404, corsHeaders);
@@ -480,6 +499,102 @@ async function handleClearQuestions(env: Env, corsHeaders: HeadersInit, user: Au
   await env.DB.prepare('DELETE FROM papers WHERE user_id = ?').bind(user.id).run();
   await logUsage(env, user.id, 'clear_questions', null, 'user cleared question database');
   return json({ ok: true }, 200, corsHeaders);
+}
+
+async function handleListStudents(env: Env, corsHeaders: HeadersInit, user: AuthUser): Promise<Response> {
+  const rows = await env.DB.prepare(
+    [
+      'SELECT id, student_no, name, class_name, avg_rate, total_questions, kp_data, created_at, updated_at',
+      'FROM students',
+      'WHERE user_id = ?',
+      'ORDER BY updated_at DESC, created_at DESC',
+      'LIMIT 1000',
+    ].join(' '),
+  )
+    .bind(user.id)
+    .all<{
+      id: string;
+      student_no: string;
+      name: string;
+      class_name: string;
+      avg_rate: number;
+      total_questions: number;
+      kp_data: string;
+      created_at: string;
+      updated_at: string;
+    }>();
+
+  const students = (rows.results || []).map((row) => ({
+    dbId: row.id,
+    id: row.student_no,
+    name: row.name,
+    class: row.class_name,
+    avgRate: row.avg_rate,
+    totalQuestions: row.total_questions,
+    kpData: safeJsonObject(row.kp_data),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }));
+
+  return json({ students }, 200, corsHeaders);
+}
+
+async function handleCreateStudent(
+  request: Request,
+  env: Env,
+  corsHeaders: HeadersInit,
+  user: AuthUser,
+): Promise<Response> {
+  const payload = (await request.json().catch(() => null)) as StudentPayload | null;
+  const studentNo = normalizeStudentText(payload?.id, 32);
+  const name = normalizeStudentText(payload?.name, 40);
+  const className = normalizeStudentText(payload?.class, 60);
+  const avgRate = clamp(numberOrDefault(payload?.avgRate, 60), 0, 100);
+  const totalQuestions = Math.max(0, Math.round(numberOrDefault(payload?.totalQuestions, 0)));
+  const kpData = normalizeKpData(payload?.kpData, avgRate);
+
+  if (!name) throw new HttpError(400, '请输入学生姓名。');
+  if (!studentNo) throw new HttpError(400, '请输入学号。');
+  if (!className) throw new HttpError(400, '请选择或输入班级。');
+
+  const existing = await env.DB.prepare('SELECT id FROM students WHERE user_id = ? AND student_no = ?')
+    .bind(user.id, studentNo)
+    .first<{ id: string }>();
+  if (existing) {
+    throw new HttpError(409, `学号 ${studentNo} 已存在。`);
+  }
+
+  const now = new Date().toISOString();
+  const dbId = crypto.randomUUID();
+  await env.DB.prepare(
+    [
+      'INSERT INTO students',
+      '(id, user_id, student_no, name, class_name, avg_rate, total_questions, kp_data, created_at, updated_at)',
+      'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    ].join(' '),
+  )
+    .bind(dbId, user.id, studentNo, name, className, avgRate, totalQuestions, JSON.stringify(kpData), now, now)
+    .run();
+
+  await logUsage(env, user.id, 'create_student', null, JSON.stringify({ studentNo, className }));
+
+  return json(
+    {
+      student: {
+        dbId,
+        id: studentNo,
+        name,
+        class: className,
+        avgRate,
+        totalQuestions,
+        kpData,
+        createdAt: now,
+        updatedAt: now,
+      },
+    },
+    200,
+    corsHeaders,
+  );
 }
 
 async function savePaperResult(
@@ -872,6 +987,41 @@ function safeJsonArray(value: string): string[] {
     // Fall through.
   }
   return value ? [value] : ['未分类'];
+}
+
+function safeJsonObject(value: string): Record<string, number> {
+  try {
+    const parsed = JSON.parse(value);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      const result: Record<string, number> = {};
+      for (const [key, rawValue] of Object.entries(parsed)) {
+        const normalizedKey = String(key).trim();
+        if (!normalizedKey) continue;
+        result[normalizedKey] = clamp(numberOrDefault(rawValue, 0), 0, 100);
+      }
+      return result;
+    }
+  } catch {
+    // Fall through.
+  }
+  return {};
+}
+
+function normalizeStudentText(value: unknown, maxLength: number): string {
+  return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';
+}
+
+function normalizeKpData(value: unknown, avgRate: number): Record<string, number> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+
+  const result: Record<string, number> = {};
+  for (const [key, rawValue] of Object.entries(value)) {
+    const normalizedKey = key.trim().slice(0, 60);
+    if (!normalizedKey) continue;
+    result[normalizedKey] = clamp(numberOrDefault(rawValue, avgRate), 0, 100);
+  }
+
+  return result;
 }
 
 function normalizeQuestionType(type: unknown): string {
