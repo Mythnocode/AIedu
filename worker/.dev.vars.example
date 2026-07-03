@@ -1,0 +1,8 @@
+BAIDU_OCR_API_KEY=your_baidu_ocr_api_key
+BAIDU_OCR_SECRET_KEY=your_baidu_ocr_secret_key
+DEEPSEEK_API_KEY=your_deepseek_api_key
+OPENAI_API_KEY=your_openai_api_key
+DEEPSEEK_MODEL=deepseek-chat
+OPENAI_MODEL=gpt-4.1-mini
+ALLOWED_ORIGIN=http://localhost:5500
+BAIDU_OCR_MODE=auto

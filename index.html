@@ -1008,6 +1008,126 @@
       background: var(--color-bg);
     }
 
+    .upload-queue {
+      width: 100%;
+      max-width: 760px;
+      margin-top: 18px;
+      background: var(--color-bg-white);
+      border: 1px solid var(--color-border-light);
+      border-radius: 8px;
+      padding: 16px;
+      display: none;
+    }
+
+    .upload-queue.show {
+      display: block;
+    }
+
+    .upload-queue-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .upload-queue-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--color-text-title);
+    }
+
+    .upload-queue-subtitle {
+      font-size: 12px;
+      color: var(--color-text-muted);
+      margin-top: 2px;
+    }
+
+    .upload-file-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 180px;
+      overflow-y: auto;
+      margin-bottom: 14px;
+    }
+
+    .upload-file-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      border: 1px solid var(--color-border-light);
+      border-radius: 6px;
+      background: var(--color-bg);
+      font-size: 13px;
+    }
+
+    .upload-file-name {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--color-text-title);
+      font-weight: 600;
+    }
+
+    .upload-file-meta {
+      flex-shrink: 0;
+      color: var(--color-text-muted);
+      font-size: 12px;
+    }
+
+    .upload-mode-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .upload-mode-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 42px;
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+      background: var(--color-bg-white);
+      color: var(--color-text-title);
+      font-family: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .upload-mode-btn:hover {
+      border-color: var(--color-primary);
+      color: var(--color-primary);
+      background: var(--color-primary-lighter);
+    }
+
+    .upload-mode-btn.primary {
+      background: var(--color-primary);
+      border-color: var(--color-primary);
+      color: #FFFFFF;
+    }
+
+    .upload-mode-btn.primary:hover {
+      background: var(--color-primary-dark);
+      color: #FFFFFF;
+    }
+
+    .upload-mode-btn svg {
+      width: 17px;
+      height: 17px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
     /* 试卷分析筛选区（上传后显示） */
     .search-filter-section {
       max-width: 1000px;
@@ -2456,6 +2576,125 @@
       margin-bottom: 12px;
     }
 
+    .settings-form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .auth-input {
+      width: 100%;
+      height: 40px;
+      padding: 0 12px;
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 14px;
+      color: var(--color-text-title);
+      background: var(--color-bg-white);
+      outline: none;
+      transition: all var(--transition-fast);
+    }
+
+    .auth-input:focus {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    .auth-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 260;
+      align-items: center;
+      justify-content: center;
+      background: rgba(15, 23, 42, 0.38);
+      padding: 20px;
+    }
+
+    .auth-modal.show {
+      display: flex;
+    }
+
+    .auth-card {
+      width: 100%;
+      max-width: 380px;
+      background: var(--color-bg-white);
+      border-radius: 10px;
+      border: 1px solid var(--color-border-light);
+      box-shadow: 0 20px 60px rgba(15, 23, 42, 0.18);
+      padding: 22px;
+    }
+
+    .auth-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .auth-card-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--color-text-title);
+    }
+
+    .auth-close {
+      border: none;
+      background: transparent;
+      color: var(--color-text-muted);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 6px;
+    }
+
+    .auth-close:hover {
+      background: var(--color-border-light);
+    }
+
+    .auth-close svg {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+    }
+
+    .auth-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      padding: 4px;
+      border-radius: 8px;
+      background: var(--color-bg);
+      margin-bottom: 14px;
+    }
+
+    .auth-tab {
+      height: 34px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      font-family: inherit;
+      font-weight: 700;
+      color: var(--color-text-muted);
+      cursor: pointer;
+    }
+
+    .auth-tab.active {
+      background: var(--color-bg-white);
+      color: var(--color-primary);
+      box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+    }
+
+    .auth-form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
     .settings-overlay {
       display: none;
       position: fixed;
@@ -3793,7 +4032,7 @@
   <main class="main">
     <!-- 演示模式横幅 -->
     <div class="demo-banner" id="demoBanner">
-      <svg viewBox="0 0 16 16" style="width:16px;height:16px;vertical-align:middle;margin-right:6px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;"><circle cx="8" cy="8" r="6"/><path d="M8 5 L8 8 L10.5 10.5"/></svg>演示模式 — 当前使用内置模拟数据（30道题目），所有功能均可体验。启动WorkBuddy本地服务后可上传真实试卷。
+      <svg viewBox="0 0 16 16" style="width:16px;height:16px;vertical-align:middle;margin-right:6px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;"><circle cx="8" cy="8" r="6"/><path d="M8 5 L8 8 L10.5 10.5"/></svg>演示模式 — 当前使用内置模拟数据（30道题目），所有功能均可体验。启动 Worker 后端并登录后可上传真实试卷。
     </div>
 
     <!-- ====================== 首页视图 ====================== -->
@@ -4055,6 +4294,26 @@
             <span class="upload-format-tag">PDF</span>
             <span class="upload-format-tag">JPG</span>
             <span class="upload-format-tag">PNG</span>
+          </div>
+        </div>
+        <div class="upload-queue" id="uploadQueue">
+          <div class="upload-queue-header">
+            <div>
+              <div class="upload-queue-title">待分析文件</div>
+              <div class="upload-queue-subtitle" id="uploadQueueSubtitle">已选择 0 个文件</div>
+            </div>
+            <button class="btn-secondary" onclick="clearPendingFiles()">清空</button>
+          </div>
+          <div class="upload-file-list" id="uploadFileList"></div>
+          <div class="upload-mode-actions">
+            <button class="upload-mode-btn primary" onclick="analyzePendingFiles('default')">
+              <svg viewBox="0 0 20 20"><path d="M4 4 L16 4 L16 16 L4 16 Z"/><path d="M7 8 L13 8"/><path d="M7 12 L11 12"/></svg>
+              默认方式
+            </button>
+            <button class="upload-mode-btn" onclick="analyzePendingFiles('multimodal')">
+              <svg viewBox="0 0 20 20"><path d="M4 5 Q4 4 5 4 L15 4 Q16 4 16 5 L16 15 Q16 16 15 16 L5 16 Q4 16 4 15 Z"/><circle cx="8" cy="8" r="1.5"/><path d="M5 14 L9 10 L12 13 L14 11 L16 13"/></svg>
+              多模态模型
+            </button>
           </div>
         </div>
       </div>
@@ -4511,16 +4770,36 @@
       <div class="settings-section">
         <div class="settings-section-title">服务状态</div>
         <div class="settings-info-item">
-          <span class="settings-info-label">WorkBuddy服务</span>
+          <span class="settings-info-label">后端服务</span>
           <span class="settings-info-value" id="settingsApiStatus">检测中...</span>
         </div>
         <div class="settings-info-item">
           <span class="settings-info-label">服务地址</span>
-          <span class="settings-info-value">http://127.0.0.1:8080</span>
+          <span class="settings-info-value" id="settingsApiBase">—</span>
         </div>
         <div class="settings-info-item">
           <span class="settings-info-label">当前模式</span>
           <span class="settings-info-value" id="settingsMode">—</span>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">账号</div>
+        <div class="settings-info-item">
+          <span class="settings-info-label">登录状态</span>
+          <span class="settings-info-value" id="settingsAuthStatus">未登录</span>
+        </div>
+        <div class="settings-info-item">
+          <span class="settings-info-label">邮箱</span>
+          <span class="settings-info-value" id="settingsAuthEmail">—</span>
+        </div>
+        <div class="settings-form" id="profileForm" style="display:none;">
+          <input class="auth-input" id="profileNameInput" type="text" placeholder="教师姓名" />
+          <button class="btn-secondary" onclick="saveProfile()" style="width:100%; justify-content:center;">保存账号信息</button>
+          <button class="btn-secondary" onclick="logoutUser()" style="width:100%; justify-content:center;">退出登录</button>
+        </div>
+        <div class="settings-action" id="loginAction">
+          <button class="upload-mode-btn primary" onclick="openAuthModal('login')" style="width:100%;">登录 / 注册</button>
         </div>
       </div>
 
@@ -4532,7 +4811,7 @@
         </div>
         <div class="settings-info-item">
           <span class="settings-info-label">存储位置</span>
-          <span class="settings-info-value">浏览器本地 (localStorage)</span>
+          <span class="settings-info-value" id="settingsStoragePlace">浏览器本地 + 账号数据库</span>
         </div>
         <div class="settings-action">
           <button class="btn-secondary" onclick="exportData()" style="width:100%; justify-content:center; gap:8px;"><svg viewBox="0 0 20 20" style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><path d="M10 3 L10 12 M6 9 L10 13 L14 9 M4 16 L16 16"/></svg> 导出题库数据 (JSON)</button>
@@ -4559,6 +4838,25 @@
       </div>
     </div>
   </aside>
+
+  <div class="auth-modal" id="authModal">
+    <div class="auth-card">
+      <div class="auth-card-header">
+        <div class="auth-card-title">账号登录</div>
+        <button class="auth-close" onclick="closeAuthModal()"><svg viewBox="0 0 20 20"><line x1="5" y1="5" x2="15" y2="15"/><line x1="15" y1="5" x2="5" y2="15"/></svg></button>
+      </div>
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="authLoginTab" onclick="setAuthMode('login')">登录</button>
+        <button class="auth-tab" id="authRegisterTab" onclick="setAuthMode('register')">注册</button>
+      </div>
+      <div class="auth-form">
+        <input class="auth-input" id="authNameInput" type="text" placeholder="教师姓名" style="display:none;" />
+        <input class="auth-input" id="authEmailInput" type="email" placeholder="邮箱" autocomplete="email" />
+        <input class="auth-input" id="authPasswordInput" type="password" placeholder="密码（至少8位）" autocomplete="current-password" />
+        <button class="upload-mode-btn primary" onclick="submitAuth()" id="authSubmitBtn">登录</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ================================================================
        进度条遮罩
@@ -4646,7 +4944,7 @@
   <!-- ================================================================
        隐藏的文件输入
        ================================================================ -->
-  <input type="file" id="fileInput" accept="image/jpeg,image/png,image/jpg" multiple style="display:none" onchange="handleFileSelect(event)" />
+  <input type="file" id="fileInput" accept="image/jpeg,image/png,image/jpg,image/webp,application/pdf" multiple style="display:none" onchange="handleFileSelect(event)" />
   <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none" onchange="handleFileSelect(event)" />
   <input type="file" id="pdfInput" accept="application/pdf" multiple style="display:none" onchange="handleFileSelect(event)" />
 
@@ -4660,9 +4958,13 @@
      第一部分：配置常量
      ======================================================================== */
   const CONFIG = {
-    API_BASE: 'http://127.0.0.1:8080',   // WorkBuddy API 地址
+    API_BASE: window.EXAM_ANALYZER_API_BASE ||
+      localStorage.getItem('exam_analyzer_api_base') ||
+      (location.hostname.endsWith('github.io')
+        ? 'https://exam-analyzer-worker.edu-qingxue.workers.dev'
+        : 'http://127.0.0.1:8787'),
     STORAGE_KEY: 'exam_analyzer_data',   // localStorage 存储键名
-    API_TIMEOUT: 15000,                  // API 超时时间（毫秒）
+    API_TIMEOUT: 120000,                 // API 超时时间（毫秒）
   };
 
   /* ========================================================================
@@ -4800,6 +5102,9 @@
     filteredQuestions: [],     // 筛选后的题目
     isDemoMode: false,          // 是否演示模式
     apiAvailable: false,        // API是否可用
+    user: null,                 // 当前登录用户
+    authMode: 'login',          // 登录/注册
+    pendingFiles: [],           // 已选择、等待统一分析的文件
     charts: {},                 // ECharts 实例缓存
     selectedKpMulti: [],        // 多选知识点
     cameraStream: null,         // 摄像头流
@@ -4853,6 +5158,38 @@
     const d = new Date(date);
     const pad = n => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  async function apiFetch(path, options = {}) {
+    const headers = options.headers ? { ...options.headers } : {};
+    const response = await fetch(`${CONFIG.API_BASE}${path}`, {
+      ...options,
+      headers,
+      credentials: 'include',
+      signal: options.signal || AbortSignal.timeout(CONFIG.API_TIMEOUT),
+    });
+
+    const contentType = response.headers.get('Content-Type') || '';
+    const data = contentType.includes('application/json') ? await response.json().catch(() => ({})) : {};
+    if (!response.ok) {
+      throw new Error(data.message || `请求失败：${response.status}`);
+    }
+    return data;
+  }
+
+  function formatFileSize(size) {
+    if (size < 1024) return size + ' B';
+    if (size < 1024 * 1024) return (size / 1024).toFixed(1) + ' KB';
+    return (size / 1024 / 1024).toFixed(1) + ' MB';
+  }
+
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   /**
@@ -7001,6 +7338,7 @@
     for (const file of files) {
       handleFileUpload(file);
     }
+    switchView('search');
   }
 
   /**
@@ -7018,64 +7356,118 @@
   }
 
   /**
-   * 处理文件上传
+   * 将文件加入待分析队列
    * @param {File} file - 上传的文件
    */
-  async function handleFileUpload(file) {
-    // 显示进度条
-    showProgress(null, 'AI解析中... 0%', '正在读取文件...');
+  function handleFileUpload(file) {
+    const supported = file.type.startsWith('image/') || file.type === 'application/pdf';
+    if (!supported) {
+      showToast('不支持的文件格式，请上传 JPG/PNG/WEBP 图片或 PDF 文档', 'error');
+      return;
+    }
+    if (file.size > 6 * 1024 * 1024) {
+      showToast(`文件 ${file.name} 超过 6MB，请压缩后重试`, 'warning', 4000);
+      return;
+    }
+
+    const exists = state.pendingFiles.some(item =>
+      item.name === file.name && item.size === file.size && item.lastModified === file.lastModified
+    );
+    if (!exists) {
+      state.pendingFiles.push(file);
+    }
+    renderPendingFiles();
+    showToast(`已加入 ${state.pendingFiles.length} 个待分析文件`, 'success', 1600);
+  }
+
+  function renderPendingFiles() {
+    const queue = $('#uploadQueue');
+    const list = $('#uploadFileList');
+    const subtitle = $('#uploadQueueSubtitle');
+    if (!queue || !list || !subtitle) return;
+
+    queue.classList.toggle('show', state.pendingFiles.length > 0);
+    subtitle.textContent = `已选择 ${state.pendingFiles.length} 个文件，全部选完后再选择分析方式`;
+    list.innerHTML = state.pendingFiles.map((file, index) => `
+      <div class="upload-file-item">
+        <div class="upload-file-name">${escapeHtml(file.name || ('文件 ' + (index + 1)))}</div>
+        <div class="upload-file-meta">${escapeHtml(file.type || '未知类型')} · ${formatFileSize(file.size)}</div>
+      </div>
+    `).join('');
+  }
+
+  function clearPendingFiles() {
+    state.pendingFiles = [];
+    renderPendingFiles();
+  }
+
+  async function analyzePendingFiles(mode) {
+    if (state.pendingFiles.length === 0) {
+      showToast('请先上传试卷文件', 'warning');
+      return;
+    }
+    if (!state.user) {
+      openAuthModal('login');
+      showToast('请先登录，分析结果会保存到账号数据库', 'warning', 4000);
+      return;
+    }
+    if (!state.apiAvailable) {
+      showToast('后端服务未连接，请先启动 Worker 服务', 'error', 4000);
+      return;
+    }
+
+    showProgress(null, '准备分析... 0%', '正在整理上传文件...');
 
     try {
-      let extractedText = '';
+      const formData = new FormData();
+      formData.append('mode', mode);
+      formData.append('title', state.pendingFiles[0].name || '试卷分析');
 
-      // 根据文件类型处理
-      if (file.type === 'application/pdf') {
-        // PDF 文件：使用 pdf.js 提取文本
-        updateProgress(20, '正在解析PDF文档...');
-        extractedText = await extractPdfText(file);
+      for (let index = 0; index < state.pendingFiles.length; index++) {
+        const file = state.pendingFiles[index];
+        updateProgress(12 + Math.round((index / state.pendingFiles.length) * 28), '正在读取文件...', file.name);
+        formData.append('files', file);
 
-        if (!extractedText || extractedText.trim().length < 10) {
-          // PDF 无文字层（扫描件）
-          hideProgress();
-          showToast('该文件无法自动识别，PDF可能为扫描件无文字层。请尝试上传清晰的图片或包含文字层的PDF', 'warning', 5000);
-          return;
+        if (file.type === 'application/pdf') {
+          const pdfText = await extractPdfText(file).catch(error => {
+            console.warn('PDF文本提取失败:', error);
+            return '';
+          });
+          if (pdfText.trim()) {
+            formData.append('texts', pdfText.trim());
+          }
         }
-      } else if (file.type.startsWith('image/')) {
-        // 图片文件：转为 base64 发送给API
-        updateProgress(20, '正在处理图片...');
-        extractedText = await fileToBase64(file);
-      } else {
-        showToast('不支持的文件格式，请上传 JPG/PNG/JPEG 图片或 PDF 文档', 'error');
+      }
+
+      updateProgress(48, mode === 'default' ? '正在执行百度OCR + DeepSeek分析...' : '正在调用GPT多模态模型...', '请稍候，批量试卷可能需要更久');
+      const data = await apiFetch('/api/papers/analyze', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const questions = normalizeQuestions(data.result && data.result.questions ? data.result.questions : []);
+      if (questions.length === 0) {
         hideProgress();
+        showToast('后端完成分析，但没有返回可展示题目', 'warning', 4000);
         return;
       }
 
-      // 调用 API 或使用演示模式进行分析
-      updateProgress(50, '正在调用AI识别...');
-      const questions = await analyzeContent(extractedText, file.type);
-
-      if (questions && questions.length > 0) {
-        // 分析成功
-        updateProgress(100, '分析完成！', `识别到 ${questions.length} 道题目`);
-        setTimeout(() => {
-          hideProgress();
-          // 合并到题库
-          state.questions = state.questions.concat(questions);
-          saveQuestions();
-          updateUI();
-          showToast(`成功识别 ${questions.length} 道题目！`, 'success');
-          // 自动跳转到试卷分析视图
-          switchView('search');
-          updateSearchViewVisibility();
-        }, 800);
-      } else {
+      updateProgress(100, '分析完成！', `识别到 ${questions.length} 道题目`);
+      setTimeout(() => {
         hideProgress();
-        showToast('未能从文件中识别出题目，请尝试上传更清晰的文件', 'warning', 4000);
-      }
+        state.questions = state.questions.concat(questions);
+        state.isDemoMode = false;
+        saveQuestions();
+        clearPendingFiles();
+        updateUI();
+        showToast(`已保存到账号数据库：${questions.length} 道题`, 'success');
+        switchView('search');
+        updateSearchViewVisibility();
+      }, 700);
     } catch (error) {
-      console.error('文件处理错误:', error);
+      console.error('试卷分析失败:', error);
       hideProgress();
-      showToast('文件处理失败：' + error.message, 'error', 4000);
+      showToast('分析失败：' + error.message, 'error', 5000);
     }
   }
 
@@ -7122,44 +7514,27 @@
   }
 
   /**
-   * 调用 WorkBuddy API 分析内容
-   * 如果 API 不可用，自动切换演示模式
+   * 调用后端分析纯文本内容
    */
   async function analyzeContent(content, contentType) {
-    if (state.apiAvailable) {
-      // 尝试调用真实 API
-      try {
-        updateProgress(70, 'AI正在识别题目...');
-
-        const response = await fetch(`${CONFIG.API_BASE}/api/analyze`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            content: content,
-            type: contentType,
-            instruction: '请识别文件中的所有题目，按题型分类，并标注知识点、难度、分值和得分率。返回JSON数组格式。',
-          }),
-          signal: AbortSignal.timeout(CONFIG.API_TIMEOUT),
-        });
-
-        if (!response.ok) throw new Error(`API返回 ${response.status}`);
-
-        const data = await response.json();
-        // 期望返回 { questions: [...] } 或直接 [...]
-        const questions = data.questions || data;
-        if (Array.isArray(questions)) {
-          return normalizeQuestions(questions);
-        }
-        throw new Error('API返回格式异常');
-      } catch (error) {
-        console.warn('API调用失败，切换演示模式:', error);
-        showToast('WorkBuddy API调用失败，已切换为演示模式', 'warning', 3000);
-        return await analyzeWithDemo();
-      }
-    } else {
-      // API 不可用，使用演示模式
+    if (!state.apiAvailable) {
       return await analyzeWithDemo();
     }
+    if (!state.user) {
+      openAuthModal('login');
+      throw new Error('请先登录后再分析文本。');
+    }
+
+    updateProgress(70, 'AI正在识别题目...');
+    const formData = new FormData();
+    formData.append('mode', 'default');
+    formData.append('title', contentType === 'text/plain' ? '文本试卷分析' : '试卷分析');
+    formData.append('texts', content);
+    const data = await apiFetch('/api/papers/analyze', {
+      method: 'POST',
+      body: formData,
+    });
+    return normalizeQuestions(data.result && data.result.questions ? data.result.questions : []);
   }
 
   /**
@@ -7972,9 +8347,17 @@
   /**
    * 清空所有本地数据
    */
-  function clearAllData() {
+  async function clearAllData() {
     if (!confirm('确定要清空所有本地数据吗？此操作不可恢复，题库中的所有题目将被删除。')) {
       return;
+    }
+    if (state.user && state.apiAvailable) {
+      try {
+        await apiFetch('/api/questions/clear', { method: 'POST' });
+      } catch (error) {
+        showToast('远程数据库清空失败：' + error.message, 'error', 4000);
+        return;
+      }
     }
     localStorage.removeItem(CONFIG.STORAGE_KEY);
     state.questions = [];
@@ -8013,31 +8396,24 @@
      ======================================================================== */
 
   /**
-   * 检测 WorkBuddy 服务是否运行
+   * 检测 Worker 后端是否运行
    */
   async function checkApiHealth() {
     const dot = $('#statusDot');
     const text = $('#statusText');
     const settingsStatus = $('#settingsApiStatus');
     const settingsMode = $('#settingsMode');
+    const settingsApiBase = $('#settingsApiBase');
+    if (settingsApiBase) settingsApiBase.textContent = CONFIG.API_BASE;
 
     try {
-      // 尝试 GET 请求检测服务状态
-      const response = await fetch(`${CONFIG.API_BASE}/health`, {
-        method: 'GET',
-        signal: AbortSignal.timeout(3000),
-      });
-
-      if (response.ok) {
-        state.apiAvailable = true;
-        dot.className = 'status-dot online';
-        text.textContent = '服务已连接';
-        settingsStatus.textContent = '已连接';
-        settingsStatus.style.color = '#10B981';
-        settingsMode.textContent = state.isDemoMode ? '演示模式' : '正常模式';
-      } else {
-        throw new Error('服务不可用');
-      }
+      await apiFetch('/api/health', { method: 'GET', signal: AbortSignal.timeout(3000) });
+      state.apiAvailable = true;
+      dot.className = 'status-dot online';
+      text.textContent = state.user ? '服务已连接' : '服务已连接 · 未登录';
+      settingsStatus.textContent = '已连接';
+      settingsStatus.style.color = '#10B981';
+      settingsMode.textContent = state.isDemoMode ? '演示模式' : '正常模式';
     } catch (error) {
       state.apiAvailable = false;
       dot.className = 'status-dot offline';
@@ -8048,7 +8424,7 @@
 
       // 如果没有已保存的数据，提示用户
       if (state.questions.length === 0) {
-        showToast('请先启动WorkBuddy本地服务，或点击"演示模式"体验功能', 'warning', 5000);
+        showToast('请先启动 Worker 后端服务，或点击"演示模式"体验功能', 'warning', 5000);
       }
     }
   }
@@ -8097,6 +8473,156 @@
     }
   }
 
+  async function refreshCurrentUser() {
+    if (!state.apiAvailable) {
+      updateAuthUI();
+      return;
+    }
+    try {
+      const data = await apiFetch('/api/auth/me', { method: 'GET', signal: AbortSignal.timeout(5000) });
+      state.user = data.user || null;
+      updateAuthUI();
+      if (state.user) {
+        await loadRemoteQuestions();
+      }
+    } catch (error) {
+      state.user = null;
+      updateAuthUI();
+    }
+  }
+
+  function updateAuthUI() {
+    const userNameEls = document.querySelectorAll('.home-user-name');
+    const userSubEls = document.querySelectorAll('.home-user-sub');
+    const avatarEls = document.querySelectorAll('.home-user-avatar');
+    const authStatus = $('#settingsAuthStatus');
+    const authEmail = $('#settingsAuthEmail');
+    const profileForm = $('#profileForm');
+    const loginAction = $('#loginAction');
+    const profileNameInput = $('#profileNameInput');
+    const storagePlace = $('#settingsStoragePlace');
+    const dot = $('#statusDot');
+    const text = $('#statusText');
+
+    if (state.user) {
+      userNameEls.forEach(el => el.textContent = state.user.name || '老师');
+      userSubEls.forEach(el => el.textContent = state.user.email || '已登录');
+      avatarEls.forEach(el => el.textContent = (state.user.name || state.user.email || '师').slice(0, 1));
+      if (authStatus) authStatus.textContent = state.user.name || '已登录';
+      if (authEmail) authEmail.textContent = state.user.email || '—';
+      if (profileForm) profileForm.style.display = 'flex';
+      if (loginAction) loginAction.style.display = 'none';
+      if (profileNameInput) profileNameInput.value = state.user.name || '';
+      if (storagePlace) storagePlace.textContent = '账号数据库 + 浏览器缓存';
+      if (state.apiAvailable && dot && text) {
+        dot.className = 'status-dot online';
+        text.textContent = '服务已连接';
+      }
+    } else {
+      userNameEls.forEach(el => el.textContent = '未登录');
+      userSubEls.forEach(el => el.textContent = '登录后保存题库');
+      avatarEls.forEach(el => el.textContent = '登');
+      if (authStatus) authStatus.textContent = '未登录';
+      if (authEmail) authEmail.textContent = '—';
+      if (profileForm) profileForm.style.display = 'none';
+      if (loginAction) loginAction.style.display = 'block';
+      if (storagePlace) storagePlace.textContent = '浏览器本地缓存';
+      if (state.apiAvailable && dot && text) {
+        dot.className = 'status-dot online';
+        text.textContent = '服务已连接 · 未登录';
+      }
+    }
+  }
+
+  function openAuthModal(mode) {
+    setAuthMode(mode || 'login');
+    $('#authModal').classList.add('show');
+    setTimeout(() => {
+      const emailInput = $('#authEmailInput');
+      if (emailInput) emailInput.focus();
+    }, 50);
+  }
+
+  function closeAuthModal() {
+    $('#authModal').classList.remove('show');
+  }
+
+  function setAuthMode(mode) {
+    state.authMode = mode === 'register' ? 'register' : 'login';
+    $('#authLoginTab').classList.toggle('active', state.authMode === 'login');
+    $('#authRegisterTab').classList.toggle('active', state.authMode === 'register');
+    $('#authNameInput').style.display = state.authMode === 'register' ? 'block' : 'none';
+    $('#authSubmitBtn').textContent = state.authMode === 'register' ? '注册并登录' : '登录';
+  }
+
+  async function submitAuth() {
+    if (!state.apiAvailable) {
+      showToast('后端服务未连接，请先启动 Worker', 'error');
+      return;
+    }
+    const email = $('#authEmailInput').value.trim();
+    const password = $('#authPasswordInput').value;
+    const name = $('#authNameInput').value.trim();
+    const path = state.authMode === 'register' ? '/api/auth/register' : '/api/auth/login';
+
+    try {
+      const data = await apiFetch(path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, name }),
+      });
+      state.user = data.user;
+      closeAuthModal();
+      updateAuthUI();
+      await loadRemoteQuestions();
+      showToast(state.authMode === 'register' ? '注册成功，已登录' : '登录成功', 'success');
+    } catch (error) {
+      showToast(error.message, 'error', 4000);
+    }
+  }
+
+  async function logoutUser() {
+    try {
+      await apiFetch('/api/auth/logout', { method: 'POST' });
+    } catch (error) {
+      console.warn('退出登录失败:', error);
+    }
+    state.user = null;
+    updateAuthUI();
+    showToast('已退出登录', 'success');
+  }
+
+  async function saveProfile() {
+    if (!state.user) return;
+    try {
+      const data = await apiFetch('/api/auth/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: $('#profileNameInput').value.trim() }),
+      });
+      state.user = data.user;
+      updateAuthUI();
+      showToast('账号信息已保存', 'success');
+    } catch (error) {
+      showToast(error.message, 'error');
+    }
+  }
+
+  async function loadRemoteQuestions() {
+    if (!state.user || !state.apiAvailable) return;
+    try {
+      const data = await apiFetch('/api/questions', { method: 'GET' });
+      if (Array.isArray(data.questions)) {
+        state.questions = normalizeQuestions(data.questions);
+        state.isDemoMode = false;
+        saveQuestions();
+        updateUI();
+      }
+    } catch (error) {
+      console.warn('远程题库加载失败:', error);
+    }
+  }
+
 
   /* ========================================================================
      第十七部分：设置面板
@@ -8107,6 +8633,7 @@
     $('#settingsOverlay').classList.add('show');
     // 更新设置中的数据
     $('#settingsTotalCount').textContent = state.questions.length + ' 道';
+    updateAuthUI();
   }
 
   function closeSettings() {
@@ -8199,6 +8726,8 @@
 
     // 更新演示模式横幅
     updateDemoBanner();
+    updateAuthUI();
+    renderPendingFiles();
   }
 
 
@@ -9147,7 +9676,7 @@
   /**
    * 页面加载完成后初始化
    */
-  function init() {
+  async function init() {
     // 1. 从 localStorage 加载已保存的数据
     const saved = loadQuestions();
     if (saved && saved.questions && saved.questions.length > 0) {
@@ -9155,8 +9684,9 @@
       state.isDemoMode = saved.isDemoMode || false;
     }
 
-    // 2. 检测 WorkBuddy API
-    checkApiHealth();
+    // 2. 检测 Worker API 并刷新账号状态
+    await checkApiHealth();
+    await refreshCurrentUser();
 
     // 3. 更新 UI
     updateUI();

@@ -1,0 +1,16 @@
+{
+  "name": "ai-exam-analyzer",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Static exam analysis frontend with a Cloudflare Worker backend.",
+  "scripts": {
+    "dev:worker": "npm --prefix worker run dev",
+    "deploy:worker": "npm --prefix worker run deploy",
+    "check": "npm --prefix worker run check",
+    "db:migrate:local": "npm --prefix worker run db:migrate:local",
+    "db:migrate:remote": "npm --prefix worker run db:migrate:remote"
+  },
+  "workspaces": [
+    "worker"
+  ]
+}

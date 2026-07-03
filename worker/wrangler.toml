@@ -1,0 +1,15 @@
+name = "exam-analyzer-worker"
+main = "src/index.ts"
+compatibility_date = "2026-07-02"
+
+[vars]
+DEEPSEEK_MODEL = "deepseek-chat"
+OPENAI_MODEL = "gpt-4.1-mini"
+ALLOWED_ORIGIN = "https://mythnocode.github.io"
+BAIDU_OCR_MODE = "auto"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "exam-analyzer-db"
+database_id = "c5bf5074-6b93-45ea-8c58-4d51cb8625eb"
+preview_database_id = "c5bf5074-6b93-45ea-8c58-4d51cb8625eb"

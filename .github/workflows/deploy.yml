@@ -15,8 +15,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v4
+      - name: Prepare static site
+        run: |
+          mkdir public
+          cp index.html public/index.html
+          cp README.md public/README.md
+          touch public/.nojekyll
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: public
       - id: deployment
         uses: actions/deploy-pages@v4
