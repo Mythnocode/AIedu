@@ -405,7 +405,7 @@ async function analyzeWithOpenAI(files: File[], textParts: string[], env: Env): 
       type: 'image_url',
       image_url: {
         url: `data:${file.type || 'image/jpeg'};base64,${imageBase64}`,
-        detail: 'high',
+        detail: 'low',
       },
     });
   }
