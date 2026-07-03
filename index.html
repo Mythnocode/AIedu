@@ -5059,6 +5059,11 @@
     API_BASE: resolveApiBase(),
     STORAGE_KEY: 'exam_analyzer_data',   // localStorage 存储键名
     API_TIMEOUT: 180000,                 // API 超时时间（毫秒）
+    MAX_UPLOAD_FILE_SIZE: 6 * 1024 * 1024,
+    MAX_UPLOAD_TOTAL_SIZE: 24 * 1024 * 1024,
+    IMAGE_COMPRESS_THRESHOLD: 1.5 * 1024 * 1024,
+    IMAGE_MAX_DIMENSION: 1800,
+    IMAGE_JPEG_QUALITY: 0.82,
   };
 
   /* ========================================================================
@@ -5266,10 +5271,7 @@
         signal: options.signal || AbortSignal.timeout(CONFIG.API_TIMEOUT),
       });
     } catch (error) {
-      const message = error && error.name === 'TimeoutError'
-        ? '分析等待超时，请压缩图片或减少单次上传数量后重试。'
-        : '无法连接线上分析服务，请刷新页面后重试；如果是本地打开页面，请使用线上地址或确认 Worker/CORS 配置。';
-      throw new Error(message);
+      throw new Error(await getNetworkFailureMessage(error));
     }
 
     const contentType = response.headers.get('Content-Type') || '';
@@ -5278,6 +5280,28 @@
       throw new Error(data.message || `请求失败：${response.status}`);
     }
     return data;
+  }
+
+  async function getNetworkFailureMessage(error) {
+    if (error && (error.name === 'TimeoutError' || error.name === 'AbortError')) {
+      return '分析等待超时，请压缩图片或减少单次上传数量后重试。';
+    }
+
+    if (location.hostname.endsWith('github.io')) {
+      try {
+        const health = await fetch(`${CONFIG.API_BASE}/api/health`, {
+          method: 'GET',
+          signal: AbortSignal.timeout(5000),
+        });
+        if (health.ok) {
+          return '线上分析服务可访问，但本次请求被中断。请减少单次上传页数，或使用压缩后的图片再试。';
+        }
+      } catch (_) {
+        // fall through to the generic online-service message
+      }
+    }
+
+    return '无法连接线上分析服务，请刷新页面后重试；如果是本地打开页面，请使用线上地址或确认 Worker/CORS 配置。';
   }
 
   function formatFileSize(size) {
@@ -7454,25 +7478,89 @@
    * 将文件加入待分析队列
    * @param {File} file - 上传的文件
    */
-  function handleFileUpload(file) {
+  async function handleFileUpload(file) {
     const supported = file.type.startsWith('image/') || file.type === 'application/pdf';
     if (!supported) {
       showToast('不支持的文件格式，请上传 JPG/PNG/WEBP 图片或 PDF 文档', 'error');
       return;
     }
-    if (file.size > 6 * 1024 * 1024) {
+
+    let uploadFile = file;
+    if (file.type.startsWith('image/') && file.size > CONFIG.IMAGE_COMPRESS_THRESHOLD) {
+      showToast(`正在压缩 ${file.name}，稍等一下`, 'info', 1800);
+      uploadFile = await compressImageForUpload(file).catch(error => {
+        console.warn('图片压缩失败:', error);
+        return file;
+      });
+      if (uploadFile.size < file.size) {
+        showToast(`${file.name} 已压缩到 ${formatFileSize(uploadFile.size)}`, 'success', 1800);
+      }
+    }
+
+    if (uploadFile.size > CONFIG.MAX_UPLOAD_FILE_SIZE) {
       showToast(`文件 ${file.name} 超过 6MB，请压缩后重试`, 'warning', 4000);
       return;
     }
 
+    const totalSize = state.pendingFiles.reduce((sum, item) => sum + item.size, 0) + uploadFile.size;
+    if (totalSize > CONFIG.MAX_UPLOAD_TOTAL_SIZE) {
+      showToast(`本次待分析文件总大小超过 ${formatFileSize(CONFIG.MAX_UPLOAD_TOTAL_SIZE)}，请减少页数后重试`, 'warning', 5000);
+      return;
+    }
+
     const exists = state.pendingFiles.some(item =>
-      item.name === file.name && item.size === file.size && item.lastModified === file.lastModified
+      item.name === uploadFile.name && item.size === uploadFile.size && item.lastModified === uploadFile.lastModified
     );
     if (!exists) {
-      state.pendingFiles.push(file);
+      state.pendingFiles.push(uploadFile);
     }
     renderPendingFiles();
     showToast(`已加入 ${state.pendingFiles.length} 个待分析文件`, 'success', 1600);
+  }
+
+  async function compressImageForUpload(file) {
+    if (!file.type.startsWith('image/')) return file;
+
+    const dataUrl = await readFileAsDataUrl(file);
+    const image = await loadImageElement(dataUrl);
+    const maxSide = Math.max(image.naturalWidth || image.width, image.naturalHeight || image.height);
+    const scale = maxSide > CONFIG.IMAGE_MAX_DIMENSION ? CONFIG.IMAGE_MAX_DIMENSION / maxSide : 1;
+    const width = Math.max(1, Math.round((image.naturalWidth || image.width) * scale));
+    const height = Math.max(1, Math.round((image.naturalHeight || image.height) * scale));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, width, height);
+    ctx.drawImage(image, 0, 0, width, height);
+
+    const blob = await new Promise((resolve, reject) => {
+      canvas.toBlob(result => result ? resolve(result) : reject(new Error('图片压缩失败')), 'image/jpeg', CONFIG.IMAGE_JPEG_QUALITY);
+    });
+
+    if (!blob || blob.size >= file.size) return file;
+    const baseName = (file.name || 'paper').replace(/\.[^.]+$/, '');
+    return new File([blob], `${baseName}.jpg`, { type: 'image/jpeg', lastModified: file.lastModified || Date.now() });
+  }
+
+  function readFileAsDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = event => resolve(event.target.result);
+      reader.onerror = () => reject(new Error('文件读取失败'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function loadImageElement(src) {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error('图片读取失败'));
+      image.src = src;
+    });
   }
 
   function renderPendingFiles() {
@@ -7545,6 +7633,12 @@
     }
     if (!state.apiAvailable) {
       showToast('后端服务未连接，请先启动 Worker 服务', 'error', 4000);
+      return;
+    }
+
+    const totalUploadSize = state.pendingFiles.reduce((sum, file) => sum + file.size, 0);
+    if (totalUploadSize > CONFIG.MAX_UPLOAD_TOTAL_SIZE) {
+      showToast(`本次待分析文件总大小超过 ${formatFileSize(CONFIG.MAX_UPLOAD_TOTAL_SIZE)}，请减少页数或压缩后重试`, 'warning', 5000);
       return;
     }
 
