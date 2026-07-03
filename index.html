@@ -1079,6 +1079,74 @@
       font-size: 12px;
     }
 
+    .upload-inline-progress {
+      display: none;
+      border: 1px solid var(--color-primary-light);
+      background: var(--color-primary-lighter);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 14px;
+    }
+
+    .upload-inline-progress.show {
+      display: block;
+    }
+
+    .upload-progress-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .upload-progress-spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(37, 99, 235, 0.18);
+      border-top-color: var(--color-primary);
+      border-radius: 50%;
+      flex-shrink: 0;
+      animation: spin 0.8s linear infinite;
+    }
+
+    .upload-progress-text {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .upload-progress-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--color-text-title);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .upload-progress-subtitle {
+      margin-top: 2px;
+      font-size: 12px;
+      color: var(--color-text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .upload-progress-track {
+      height: 6px;
+      border-radius: 999px;
+      background: #DBEAFE;
+      overflow: hidden;
+    }
+
+    .upload-progress-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--color-primary), #8B5CF6);
+      transition: width 0.25s ease;
+    }
+
     .upload-mode-actions {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1105,6 +1173,12 @@
       border-color: var(--color-primary);
       color: var(--color-primary);
       background: var(--color-primary-lighter);
+    }
+
+    .upload-mode-btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.58;
+      transform: none;
     }
 
     .upload-mode-btn.primary {
@@ -4305,6 +4379,18 @@
             <button class="btn-secondary" onclick="clearPendingFiles()">清空</button>
           </div>
           <div class="upload-file-list" id="uploadFileList"></div>
+          <div class="upload-inline-progress" id="uploadInlineProgress">
+            <div class="upload-progress-row">
+              <div class="upload-progress-spinner"></div>
+              <div class="upload-progress-text">
+                <div class="upload-progress-title" id="uploadProgressTitle">正在准备分析...</div>
+                <div class="upload-progress-subtitle" id="uploadProgressSubtitle">请稍候</div>
+              </div>
+            </div>
+            <div class="upload-progress-track">
+              <div class="upload-progress-fill" id="uploadProgressFill"></div>
+            </div>
+          </div>
           <div class="upload-mode-actions">
             <button class="upload-mode-btn primary" onclick="analyzePendingFiles('default')">
               <svg viewBox="0 0 20 20"><path d="M4 4 L16 4 L16 16 L4 16 Z"/><path d="M7 8 L13 8"/><path d="M7 12 L11 12"/></svg>
@@ -5105,6 +5191,7 @@
     user: null,                 // 当前登录用户
     authMode: 'login',          // 登录/注册
     pendingFiles: [],           // 已选择、等待统一分析的文件
+    isAnalyzingUpload: false,   // 上传队列是否正在分析
     charts: {},                 // ECharts 实例缓存
     selectedKpMulti: [],        // 多选知识点
     cameraStream: null,         // 摄像头流
@@ -7387,17 +7474,54 @@
     if (!queue || !list || !subtitle) return;
 
     queue.classList.toggle('show', state.pendingFiles.length > 0);
-    subtitle.textContent = `已选择 ${state.pendingFiles.length} 个文件，全部选完后再选择分析方式`;
+    subtitle.textContent = state.isAnalyzingUpload
+      ? `正在分析 ${state.pendingFiles.length} 个文件`
+      : `已选择 ${state.pendingFiles.length} 个文件，全部选完后再选择分析方式`;
     list.innerHTML = state.pendingFiles.map((file, index) => `
       <div class="upload-file-item">
         <div class="upload-file-name">${escapeHtml(file.name || ('文件 ' + (index + 1)))}</div>
         <div class="upload-file-meta">${escapeHtml(file.type || '未知类型')} · ${formatFileSize(file.size)}</div>
       </div>
     `).join('');
+
+    document.querySelectorAll('#uploadQueue .upload-mode-btn').forEach(btn => {
+      btn.disabled = state.isAnalyzingUpload;
+    });
+    var clearBtn = document.querySelector('#uploadQueue .btn-secondary');
+    if (clearBtn) clearBtn.disabled = state.isAnalyzingUpload;
   }
 
   function clearPendingFiles() {
+    if (state.isAnalyzingUpload) return;
     state.pendingFiles = [];
+    renderPendingFiles();
+  }
+
+  function showUploadProgress(title, subtitle) {
+    state.isAnalyzingUpload = true;
+    renderPendingFiles();
+    var progress = $('#uploadInlineProgress');
+    if (progress) progress.classList.add('show');
+    updateUploadProgress(0, title || '正在准备分析...', subtitle || '正在整理上传文件...');
+  }
+
+  function updateUploadProgress(percent, title, subtitle) {
+    var progress = $('#uploadInlineProgress');
+    var fill = $('#uploadProgressFill');
+    var titleEl = $('#uploadProgressTitle');
+    var subtitleEl = $('#uploadProgressSubtitle');
+    if (progress) progress.classList.add('show');
+    if (fill) fill.style.width = Math.min(100, Math.max(0, percent)) + '%';
+    if (titleEl && title) titleEl.textContent = title;
+    if (subtitleEl && subtitle) subtitleEl.textContent = subtitle;
+  }
+
+  function hideUploadProgress() {
+    state.isAnalyzingUpload = false;
+    var progress = $('#uploadInlineProgress');
+    var fill = $('#uploadProgressFill');
+    if (progress) progress.classList.remove('show');
+    if (fill) fill.style.width = '0%';
     renderPendingFiles();
   }
 
@@ -7416,7 +7540,7 @@
       return;
     }
 
-    showProgress(null, '准备分析... 0%', '正在整理上传文件...');
+    showUploadProgress('正在准备分析...', '正在整理上传文件');
 
     try {
       const formData = new FormData();
@@ -7425,7 +7549,7 @@
 
       for (let index = 0; index < state.pendingFiles.length; index++) {
         const file = state.pendingFiles[index];
-        updateProgress(12 + Math.round((index / state.pendingFiles.length) * 28), '正在读取文件...', file.name);
+        updateUploadProgress(12 + Math.round((index / state.pendingFiles.length) * 28), '正在读取文件...', file.name);
         formData.append('files', file);
 
         if (file.type === 'application/pdf') {
@@ -7439,7 +7563,7 @@
         }
       }
 
-      updateProgress(48, mode === 'default' ? '正在执行百度OCR + DeepSeek分析...' : '正在调用GPT多模态模型...', '请稍候，批量试卷可能需要更久');
+      updateUploadProgress(48, mode === 'default' ? '正在执行百度OCR + DeepSeek分析...' : '正在调用GPT多模态模型...', '批量试卷可能需要更久，页面会保持可见');
       const data = await apiFetch('/api/papers/analyze', {
         method: 'POST',
         body: formData,
@@ -7447,14 +7571,14 @@
 
       const questions = normalizeQuestions(data.result && data.result.questions ? data.result.questions : []);
       if (questions.length === 0) {
-        hideProgress();
+        hideUploadProgress();
         showToast('后端完成分析，但没有返回可展示题目', 'warning', 4000);
         return;
       }
 
-      updateProgress(100, '分析完成！', `识别到 ${questions.length} 道题目`);
+      updateUploadProgress(100, '分析完成！', `识别到 ${questions.length} 道题目`);
       setTimeout(() => {
-        hideProgress();
+        hideUploadProgress();
         state.questions = state.questions.concat(questions);
         state.isDemoMode = false;
         saveQuestions();
@@ -7466,7 +7590,7 @@
       }, 700);
     } catch (error) {
       console.error('试卷分析失败:', error);
-      hideProgress();
+      hideUploadProgress();
       showToast('分析失败：' + error.message, 'error', 5000);
     }
   }
