@@ -9,6 +9,7 @@ type Env = {
   DEEPSEEK_MODEL?: string;
   OPENAI_MODEL?: string;
   ALLOWED_ORIGIN?: string;
+  ALLOWED_ORIGINS?: string;
   BAIDU_OCR_MODE?: 'auto' | 'accurate_basic' | 'formula';
 };
 
@@ -957,8 +958,17 @@ function assertKeys(entries: Array<[string, string | undefined]>): void {
 
 function getCorsHeaders(env: Env, request: Request): HeadersInit {
   const origin = request.headers.get('Origin');
-  const configuredOrigin = env.ALLOWED_ORIGIN || '*';
-  const allowOrigin = configuredOrigin === '*' && origin ? origin : configuredOrigin;
+  const configuredOrigins = (env.ALLOWED_ORIGINS || env.ALLOWED_ORIGIN || '*')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const allowAny = configuredOrigins.includes('*');
+  const allowOrigin =
+    allowAny && origin
+      ? origin
+      : origin && configuredOrigins.includes(origin)
+        ? origin
+        : configuredOrigins[0] || '*';
 
   return {
     'Access-Control-Allow-Origin': allowOrigin,
