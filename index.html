@@ -5491,6 +5491,14 @@
     return localStorage.getItem('exam_analyzer_api_base') || 'http://127.0.0.1:8787';
   }
 
+  function isOnlineHost() {
+    return (
+      location.hostname.endsWith('github.io') ||
+      location.hostname === 'smartxh.asia' ||
+      location.hostname === 'www.smartxh.asia'
+    );
+  }
+
   const CONFIG = {
     API_BASE: resolveApiBase(),
     STORAGE_KEY: 'exam_analyzer_data',   // localStorage 存储键名
@@ -5618,18 +5626,43 @@
     return controller.signal;
   }
 
+  function getApiBaseCandidates() {
+    const bases = [CONFIG.API_BASE];
+    return Array.from(new Set(bases.filter(Boolean).map(base => base.replace(/\/+$/, ''))));
+  }
+
+  function setActiveApiBase(base) {
+    CONFIG.API_BASE = base.replace(/\/+$/, '');
+    const settingsApiBase = $('#settingsApiBase');
+    if (settingsApiBase) settingsApiBase.textContent = CONFIG.API_BASE;
+    if (!isOnlineHost()) {
+      localStorage.setItem('exam_analyzer_api_base', CONFIG.API_BASE);
+    }
+  }
+
   async function apiFetch(path, options = {}) {
     const headers = options.headers ? { ...options.headers } : {};
     let response;
-    try {
-      response = await fetch(`${CONFIG.API_BASE}${path}`, {
-        ...options,
-        headers,
-        credentials: 'include',
-        signal: options.signal || createTimeoutSignal(CONFIG.API_TIMEOUT),
-      });
-    } catch (error) {
-      throw new Error(await getNetworkFailureMessage(error));
+    const candidates = options.disableFallback ? [CONFIG.API_BASE] : getApiBaseCandidates();
+    let networkError;
+    for (const base of candidates) {
+      try {
+        response = await fetch(`${base}${path}`, {
+          ...options,
+          headers,
+          credentials: 'include',
+          signal: options.signal || createTimeoutSignal(CONFIG.API_TIMEOUT),
+        });
+        if (base !== CONFIG.API_BASE) {
+          setActiveApiBase(base);
+        }
+        break;
+      } catch (error) {
+        networkError = error;
+      }
+    }
+    if (!response) {
+      throw new Error(await getNetworkFailureMessage(networkError));
     }
 
     const contentType = response.headers.get('Content-Type') || '';
@@ -5645,13 +5678,9 @@
       return '分析等待超时，请压缩图片或减少单次上传数量后重试。';
     }
 
-    if (location.hostname.endsWith('github.io')) {
+    if (isOnlineHost()) {
       try {
-        const health = await fetch(`${CONFIG.API_BASE}/api/health`, {
-          method: 'GET',
-          signal: createTimeoutSignal(5000),
-        });
-        if (health.ok) {
+        if (await probeApiHealth(5000)) {
           return '线上分析服务可访问，但本次请求被中断。请减少单次上传页数，或使用压缩后的图片再试。';
         }
       } catch (_) {
@@ -9147,8 +9176,8 @@
       showToast('请先登录，分析结果会保存到账号数据库', 'warning', 4000);
       return;
     }
-    if (!state.apiAvailable) {
-      showToast('后端服务未连接，请先启动 Worker 服务', 'error', 4000);
+    if (!(await ensureApiAvailable({ silent: false }))) {
+      showToast('后端服务未连接，请刷新页面后重试，或检查当前手机网络是否能访问 api.smartxh.asia', 'error', 5000);
       return;
     }
 
@@ -10473,35 +10502,81 @@
   /**
    * 检测 Worker 后端是否运行
    */
-  async function checkApiHealth() {
+  async function probeApiHealth(timeoutMs) {
+    let lastError;
+    for (const base of getApiBaseCandidates()) {
+      try {
+        const response = await fetch(`${base}/api/health?t=${Date.now()}`, {
+          method: 'GET',
+          cache: 'no-store',
+          credentials: 'omit',
+          signal: createTimeoutSignal(timeoutMs || 8000),
+        });
+        if (!response.ok) {
+          throw new Error(`Health check failed: ${response.status}`);
+        }
+        if (base !== CONFIG.API_BASE) {
+          setActiveApiBase(base);
+        }
+        return true;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    throw lastError || new Error('Health check failed');
+  }
+
+  async function checkApiHealth(options = {}) {
     const dot = $('#statusDot');
     const text = $('#statusText');
     const settingsStatus = $('#settingsApiStatus');
     const settingsMode = $('#settingsMode');
     const settingsApiBase = $('#settingsApiBase');
+    const silent = options.silent === true;
     if (settingsApiBase) settingsApiBase.textContent = CONFIG.API_BASE;
 
     try {
-      await apiFetch('/api/health', { method: 'GET', signal: createTimeoutSignal(3000) });
+      try {
+        await probeApiHealth(options.timeoutMs || 8000);
+      } catch (firstError) {
+        await new Promise(resolve => setTimeout(resolve, 600));
+        await probeApiHealth(options.retryTimeoutMs || 10000);
+      }
       state.apiAvailable = true;
-      dot.className = 'status-dot online';
-      text.textContent = state.user ? '服务已连接' : '服务已连接 · 未登录';
-      settingsStatus.textContent = '已连接';
-      settingsStatus.style.color = '#10B981';
-      settingsMode.textContent = '正常模式';
+      if (dot) dot.className = 'status-dot online';
+      if (text) text.textContent = state.user ? '服务已连接' : '服务已连接 · 未登录';
+      if (settingsStatus) {
+        settingsStatus.textContent = '已连接';
+        settingsStatus.style.color = '#10B981';
+      }
+      if (settingsMode) settingsMode.textContent = '正常模式';
+      return true;
     } catch (error) {
       state.apiAvailable = false;
-      dot.className = 'status-dot offline';
-      text.textContent = '服务未启动';
-      settingsStatus.textContent = '未连接';
-      settingsStatus.style.color = '#EF4444';
-      settingsMode.textContent = '未连接';
+      if (dot) dot.className = 'status-dot offline';
+      if (text) text.textContent = '服务未连接';
+      if (settingsStatus) {
+        settingsStatus.textContent = '未连接';
+        settingsStatus.style.color = '#EF4444';
+        settingsStatus.title = error && error.message ? error.message : '';
+      }
+      if (settingsMode) settingsMode.textContent = '未连接';
 
       // 如果没有已保存的数据，提示用户
-      if (state.questions.length === 0) {
+      if (!silent && state.questions.length === 0) {
         showToast('后端服务未连接，请确保 Worker 已部署并登录后上传试卷', 'warning', 5000);
       }
+      return false;
     }
+  }
+
+  async function ensureApiAvailable(options = {}) {
+    if (state.apiAvailable) return true;
+    return checkApiHealth({
+      silent: options.silent !== false,
+      timeoutMs: options.timeoutMs || 10000,
+      retryTimeoutMs: options.retryTimeoutMs || 12000,
+    });
   }
 
 
@@ -10616,8 +10691,8 @@
   }
 
   async function submitAuth() {
-    if (!state.apiAvailable) {
-      showToast('后端服务未连接，请先启动 Worker', 'error');
+    if (!(await ensureApiAvailable({ silent: false }))) {
+      showToast('后端服务未连接，请刷新页面后重试，或检查当前手机网络是否能访问 api.smartxh.asia', 'error', 5000);
       return;
     }
     const email = $('#authEmailInput').value.trim();
