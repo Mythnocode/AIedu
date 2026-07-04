@@ -14,6 +14,10 @@ BAIDU_OCR_MODE = "auto"
 pattern = "api.smartxh.asia"
 custom_domain = true
 
+[[routes]]
+pattern = "ai.smartxh.asia"
+custom_domain = true
+
 [[d1_databases]]
 binding = "DB"
 database_name = "exam-analyzer-db"

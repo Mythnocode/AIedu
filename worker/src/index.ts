@@ -686,11 +686,13 @@ async function handleMentalMathOcr(
     '',
     combinedText,
     '',
-    '请从以上文字中提取所有口算算式，每行一条，格式为：算式 = 答案。',
-    '例如：3 + 5 = 8',
-    '只输出算式，不要输出编号、说明或其他内容。',
-    '把 × ÷ 符号保留原样输出。',
-    '如果某行明显不是算式，请忽略它。',
+    '请从以上文字中提取所有口算算式。',
+    '要求：',
+    '1. 每行只输出一个算式，格式为：算式 = 答案',
+    '2. 例如正确输出：3 + 5 = 8',
+    '3. 使用 + - * / 作为运算符（不要用 × ÷ 符号）',
+    '4. 只输出算式行，不要输出编号、不要加任何说明文字',
+    '5. 如果某行明显不是算式，请忽略',
   ].join('\n');
 
   const response = await fetch('https://api.deepseek.com/chat/completions', {
@@ -726,12 +728,35 @@ async function handleMentalMathOcr(
   const problems: Array<{ text: string; answer: number }> = [];
   for (const line of content.split('\n')) {
     const trimmed = line.trim();
-    const match = trimmed.match(/([\d\s+\-×÷\u00d7\u00f7\u2212]+)\s*=\s*(-?\d+\.?\d*)/);
+    if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('//')) continue;
+    // 统一运算符符号：×→*  ÷→/  ⋅→*  x→*  X→*  −→-
+    let normalized = trimmed
+      .replace(/[×xX⋅\u00d7\u00b7]/g, '*')
+      .replace(/[÷\u00f7]/g, '/')
+      .replace(/[−\u2212\u2014]/g, '-');
+    // 匹配各种格式：3+5=8、3 + 5 = 8、3+ 5=8等
+    const match = normalized.match(/(-?\d+)\s*([+\-*/])\s*(-?\d+)\s*=\s*(-?\d+\.?\d*)/);
     if (match) {
-      const expr = match[1].trim();
-      const answer = parseInt(match[2], 10);
+      const a = match[1], op = match[2], b = match[3];
+      const answer = parseInt(match[4], 10);
       if (!isNaN(answer)) {
-        problems.push({ text: expr, answer });
+        // 恢复显示符号
+        const displayOp = op === '*' ? '×' : op === '/' ? '÷' : op;
+        problems.push({ text: a + ' ' + displayOp + ' ' + b, answer });
+      }
+    }
+  }
+
+  // 兜底：如果严格匹配没结果，尝试更宽松地提取
+  if (problems.length === 0) {
+    for (const line of content.split('\n')) {
+      const trimmed = line.trim();
+      const match = trimmed.match(/(-?\d+)\s*[+\-*/×÷xX\u00d7\u00f7\u2212]\s*(-?\d+)\s*[=＝]\s*(-?\d+\.?\d*)/);
+      if (match) {
+        const answer = parseInt(match[3], 10);
+        if (!isNaN(answer)) {
+          problems.push({ text: match[1] + ' ' + match[0].match(/[+\-*/×÷xX\u00d7\u00f7\u2212]/)?.[0] + ' ' + match[2], answer });
+        }
       }
     }
   }
