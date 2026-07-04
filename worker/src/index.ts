@@ -672,7 +672,7 @@ async function handleMentalMathOcr(
   for (const file of files) {
     if (!file.type.startsWith('image/')) continue;
     const imageBase64 = await fileToBase64(file);
-    const ocrText = await recognizeAccurateBasicWithBaidu(imageBase64, env);
+    const ocrText = await recognizeWithBaidu(imageBase64, env);
     allOcrLines.push(ocrText);
   }
 
@@ -690,9 +690,11 @@ async function handleMentalMathOcr(
     '要求：',
     '1. 每行只输出一个算式，格式为：算式 = 答案',
     '2. 例如正确输出：3 + 5 = 8',
-    '3. 使用 + - * / 作为运算符（不要用 × ÷ 符号）',
-    '4. 只输出算式行，不要输出编号、不要加任何说明文字',
-    '5. 如果某行明显不是算式，请忽略',
+    '3. 使用 + - * / 作为运算符（不要使用 × ÷ 符号）',
+    '4. 注意 OCR 可能把乘号 × 识别成字母 x 或 X，把除号 ÷ 识别成 /，请修正成 *',
+    '5. 包含混合运算的完整表达式，例如 OCR 输出 "9 X 3 + 4" 要输出为 9 * 3 + 4 = 31',
+    '6. 只输出算式行，不要输出编号、不要加任何说明文字',
+    '7. 如果某行明显不是算式，请忽略',
   ].join('\n');
 
   const response = await fetch('https://api.deepseek.com/chat/completions', {
@@ -734,15 +736,14 @@ async function handleMentalMathOcr(
       .replace(/[×xX⋅\u00d7\u00b7]/g, '*')
       .replace(/[÷\u00f7]/g, '/')
       .replace(/[−\u2212\u2014]/g, '-');
-    // 匹配各种格式：3+5=8、3 + 5 = 8、3+ 5=8等
-    const match = normalized.match(/(-?\d+)\s*([+\-*/])\s*(-?\d+)\s*=\s*(-?\d+\.?\d*)/);
+    // 匹配算式 = 答案：支持混合运算 9*3+4=31 或单一运算 3+5=8
+    const match = normalized.match(/^([\d\s+\-*/().]+)\s*=\s*(-?\d+\.?\d*)\s*$/);
     if (match) {
-      const a = match[1], op = match[2], b = match[3];
-      const answer = parseInt(match[4], 10);
-      if (!isNaN(answer)) {
-        // 恢复显示符号
-        const displayOp = op === '*' ? '×' : op === '/' ? '÷' : op;
-        problems.push({ text: a + ' ' + displayOp + ' ' + b, answer });
+      const expr = match[1].trim();
+      const answer = parseInt(match[2], 10);
+      if (!isNaN(answer) && /^[\d\s+\-*/()]+$/.test(expr)) {
+        const displayExpr = expr.replace(/\*/g, '×').replace(/\//g, '÷');
+        problems.push({ text: displayExpr, answer });
       }
     }
   }
@@ -751,11 +752,12 @@ async function handleMentalMathOcr(
   if (problems.length === 0) {
     for (const line of content.split('\n')) {
       const trimmed = line.trim();
-      const match = trimmed.match(/(-?\d+)\s*[+\-*/×÷xX\u00d7\u00f7\u2212]\s*(-?\d+)\s*[=＝]\s*(-?\d+\.?\d*)/);
+      const match = trimmed.match(/(-?\d+(?:\s*[+\-*/]\s*-?\d+)+)\s*[=＝]\s*(-?\d+\.?\d*)/);
       if (match) {
-        const answer = parseInt(match[3], 10);
+        const answer = parseInt(match[2], 10);
         if (!isNaN(answer)) {
-          problems.push({ text: match[1] + ' ' + match[0].match(/[+\-*/×÷xX\u00d7\u00f7\u2212]/)?.[0] + ' ' + match[2], answer });
+          const displayExpr = match[1].trim().replace(/\*/g, '×').replace(/\//g, '÷');
+          problems.push({ text: displayExpr, answer });
         }
       }
     }
