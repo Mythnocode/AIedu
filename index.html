@@ -10729,8 +10729,13 @@
   }
 
   function onPasswordInput(input) {
-    var val = input.value;
     var strengthEl = $('#passwordStrength');
+    // 登录模式下不显示密码强度
+    if (state.authMode !== 'register') {
+      strengthEl.style.display = 'none';
+      return;
+    }
+    var val = input.value;
     var barEl = $('#passwordStrengthBar');
     var textEl = $('#passwordStrengthText');
     if (!val) {
