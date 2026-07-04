@@ -21,6 +21,7 @@ jobs:
           cp index.html public/index.html
           cp README.md public/README.md
           cp LOGO.png public/LOGO.png
+          cp CNAME public/CNAME
           touch public/.nojekyll
       - uses: actions/upload-pages-artifact@v3
         with:
