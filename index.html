@@ -5475,7 +5475,11 @@
       return window.EXAM_ANALYZER_API_BASE;
     }
 
-    if (location.hostname.endsWith('github.io')) {
+    if (
+      location.hostname.endsWith('github.io') ||
+      location.hostname === 'smartxh.asia' ||
+      location.hostname === 'www.smartxh.asia'
+    ) {
       return 'https://exam-analyzer-worker.edu-qingxue.workers.dev';
     }
 
