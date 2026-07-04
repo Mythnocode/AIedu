@@ -7668,6 +7668,15 @@
     var blob = dataURLtoBlob(dataUrl);
     if (!blob) throw new Error('图片格式无效');
 
+    // 如果图片超过 1MB，自动压缩
+    if (blob.size > 1024 * 1024) {
+      var originalSize = blob.size;
+      blob = await compressImageBlob(blob);
+      if (blob && blob.size < originalSize) {
+        showToast('图片已压缩: ' + formatFileSize(blob.size), 'success', 1800);
+      }
+    }
+
     var formData = new FormData();
     formData.append('files', blob, 'mental_math.jpg');
 
@@ -7710,6 +7719,33 @@
     } catch (e) {
       return null;
     }
+  }
+
+  function compressImageBlob(blob) {
+    return new Promise(function(resolve) {
+      var dataUrl = URL.createObjectURL(blob);
+      var image = new Image();
+      image.onload = function() {
+        var maxSide = 1200;
+        var scale = Math.max(image.naturalWidth, image.naturalHeight) > maxSide
+          ? maxSide / Math.max(image.naturalWidth, image.naturalHeight) : 1;
+        var w = Math.round(image.naturalWidth * scale);
+        var h = Math.round(image.naturalHeight * scale);
+        var canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        var ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(image, 0, 0, w, h);
+        URL.revokeObjectURL(dataUrl);
+        canvas.toBlob(function(result) {
+          resolve(result || blob);
+        }, 'image/jpeg', 0.72);
+      };
+      image.onerror = function() { resolve(blob); };
+      image.src = dataUrl;
+    });
   }
 
   function renderMentalProblems() {
