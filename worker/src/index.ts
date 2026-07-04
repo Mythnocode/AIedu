@@ -672,7 +672,7 @@ async function handleMentalMathOcr(
   for (const file of files) {
     if (!file.type.startsWith('image/')) continue;
     const imageBase64 = await fileToBase64(file);
-    const ocrText = await recognizeWithBaidu(imageBase64, env);
+    const ocrText = await recognizeAccurateBasicWithBaidu(imageBase64, env);
     allOcrLines.push(ocrText);
   }
 
@@ -737,7 +737,7 @@ async function handleMentalMathOcr(
       .replace(/[÷\u00f7]/g, '/')
       .replace(/[−\u2212\u2014]/g, '-');
     // 匹配算式 = 答案：支持混合运算 9*3+4=31 或单一运算 3+5=8
-    const match = normalized.match(/^([\d\s+\-*/().]+)\s*=\s*(-?\d+\.?\d*)\s*$/);
+    const match = normalized.match(/([\d\s+\-*/().]+)\s*=\s*(-?\d+\.?\d*)/);
     if (match) {
       const expr = match[1].trim();
       const answer = parseInt(match[2], 10);
