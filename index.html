@@ -2382,6 +2382,12 @@
     .scan-feature-icon--red svg {
       stroke: #EF4444;
     }
+    .scan-feature-icon--indigo {
+      background: rgba(79, 70, 229, 0.1);
+    }
+    .scan-feature-icon--indigo svg {
+      stroke: #4F46E5;
+    }
     .scan-feature-name {
       font-size: 16px;
       font-weight: 600;
@@ -4220,7 +4226,7 @@
             </div>
           </div>
           <!-- 平均分 -->
-          <div class="home-bubble home-bubble--green" onclick="switchView('dashboard')">
+          <div class="home-bubble home-bubble--green" onclick="switchView('search')">
             <div class="home-bubble-icon">
               <svg viewBox="0 0 24 24">
                 <path d="M4 20 L4 4"/>
@@ -4252,7 +4258,7 @@
             </div>
           </div>
           <!-- 待补知识点 -->
-          <div class="home-bubble home-bubble--purple" onclick="switchView('dashboard')">
+          <div class="home-bubble home-bubble--purple" onclick="goToWeakKnowledge()">
             <div class="home-bubble-icon">
               <svg viewBox="0 0 24 24">
                 <circle cx="12" cy="12" r="3.5"/>
@@ -4348,10 +4354,11 @@
                   <line x1="3" y1="9" x2="12" y2="12"/>
                 </svg>
               </div>
-              <div>
+              <div style="flex:1;">
                 <div class="home-chart-card-title">知识点掌握雷达图</div>
-                <div class="home-chart-card-desc">各知识点掌握程度一览</div>
+                <div class="home-chart-card-desc">点击知识点可跳转试卷分析</div>
               </div>
+              <button onclick="switchView('search')" style="background:rgba(139,92,246,0.1);border:none;color:#8B5CF6;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">查看试卷分析</button>
             </div>
             <div class="home-chart-container" id="homeRadarChart"></div>
           </div>
@@ -4535,6 +4542,11 @@
 
           <!-- 清空筛选按钮 -->
           <button class="btn-secondary" onclick="clearFilters()">清除筛选</button>
+          <!-- 一键批改 -->
+          <button class="btn-secondary" onclick="goToAutoGrade()" style="color:#fff;background:var(--color-primary);border-color:var(--color-primary);">
+            <svg viewBox="0 0 20 20" style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><path d="M6 3 L18 3 L18 21 L6 21 Z"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/><path d="M19 6 L22 6 L22 9"/><path d="M19 18 L22 18 L22 15"/></svg>
+            一键批改
+          </button>
           <!-- 跳转到检索与整理 -->
           <button class="btn-secondary" onclick="syncToArchive()" style="color:var(--color-primary);border-color:var(--color-primary);">
             <svg viewBox="0 0 20 20" style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><circle cx="9" cy="9" r="6"/><line x1="13.5" y1="13.5" x2="17" y2="17"/></svg>
@@ -4715,6 +4727,19 @@
           </div>
           <div class="scan-feature-name">口算批改</div>
           <div class="scan-feature-desc">拍照批改口算 · 即时反馈对错</div>
+        </div>
+
+        <div class="scan-feature-card" style="animation-delay:0.4s" onclick="openReviewSuggestion()">
+          <div class="scan-feature-icon scan-feature-icon--indigo">
+            <svg viewBox="0 0 24 24">
+              <path d="M4 5 L20 5 L20 16 L13 16 L9 20 L9 16 L4 16 Z"/>
+              <line x1="8" y1="9" x2="16" y2="9"/>
+              <line x1="8" y1="12" x2="13" y2="12"/>
+              <circle cx="17" cy="12" r="1.5" style="fill:#EF4444;stroke:none;"/>
+            </svg>
+          </div>
+          <div class="scan-feature-name">讲评建议</div>
+          <div class="scan-feature-desc">知识点失分排序 · 智能讲评优先级</div>
         </div>
       </div>
     </section>
@@ -5411,6 +5436,19 @@
   /* ========================================================================
      功能1：试卷自动批改
      ======================================================================== */
+
+  /**
+   * 从试卷分析页面跳转到智能阅卷并打开自动批改
+   */
+  function goToAutoGrade() {
+    if (state.questions.length === 0) {
+      showToast('请先上传试卷进行分析', 'info', 2000);
+      return;
+    }
+    switchView('dashboard');
+    setTimeout(function() { openAutoGrade(); }, 300);
+  }
+
   function openAutoGrade() {
     var questions = state.questions;
     var body = '';
@@ -9082,6 +9120,127 @@
 
 
   /* ========================================================================
+     功能7：讲评建议
+     ======================================================================== */
+
+  /**
+   * 打开拓评建议弹窗
+   * 根据题目数据计算各知识点失分率，按优先级排序，给出讲评建议
+   */
+  function openReviewSuggestion() {
+    if (state.questions.length === 0) {
+      openFeature(
+        '<span>讲评建议</span>',
+        '<div style="text-align:center;padding:48px 24px;color:#94A3B8;">' +
+        '<svg viewBox="0 0 24 24" style="width:48px;height:48px;fill:none;stroke:#94A3B8;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;margin-bottom:12px;"><path d="M4 5 L20 5 L20 16 L13 16 L9 20 L9 16 L4 16 Z"/></svg>' +
+        '<div style="font-size:16px;margin-bottom:8px;">暂无题目数据</div>' +
+        '<div style="font-size:14px;">请先上传试卷进行分析，系统将自动生成讲评建议</div>' +
+        '<button onclick="closeFeature();switchView(\'search\');" style="margin-top:16px;background:var(--color-primary);color:#fff;border:none;padding:10px 24px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;">去上传试卷</button>' +
+        '</div>'
+      );
+      return;
+    }
+
+    // 统计各知识点数据
+    var kpData = {};
+    state.questions.forEach(function(q) {
+      (q.knowledgePoints || []).forEach(function(kp) {
+        if (!kpData[kp]) {
+          kpData[kp] = { totalScore: 0, totalActual: 0, count: 0, errorCount: 0 };
+        }
+        kpData[kp].totalScore += q.score || 0;
+        kpData[kp].totalActual += ((q.scoreRate || 0) / 100) * (q.score || 0);
+        kpData[kp].count += 1;
+        if ((q.scoreRate || 0) < 60) kpData[kp].errorCount += 1;
+      });
+    });
+
+    // 计算失分率并排序
+    var sorted = Object.entries(kpData).map(function(entry) {
+      var name = entry[0];
+      var data = entry[1];
+      var avgFullScore = data.totalScore / data.count;
+      var avgActual = data.totalActual / data.count;
+      var lossRate = avgFullScore > 0 ? (avgFullScore - avgActual) / avgFullScore : 0;
+      return {
+        name: name,
+        count: data.count,
+        errorCount: data.errorCount,
+        avgFullScore: Math.round(avgFullScore * 10) / 10,
+        avgActual: Math.round(avgActual * 10) / 10,
+        lossRate: Math.round(lossRate * 100),
+        reviewTime: Math.max(5, Math.min(30, Math.round(lossRate * 30 + data.count * 0.5)))
+      };
+    }).sort(function(a, b) { return b.lossRate - a.lossRate; });
+
+    // 总体统计
+    var totalKp = sorted.length;
+    var urgentCount = sorted.filter(function(s) { return s.lossRate >= 50; }).length;
+    var totalTime = sorted.reduce(function(sum, s) { return sum + s.reviewTime; }, 0);
+
+    var body = '';
+
+    // 顶部摘要
+    body += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">';
+    body += '<div style="background:#EFF6FF;border-radius:12px;padding:16px;text-align:center;">';
+    body += '<div style="font-size:28px;font-weight:800;color:#2563EB;">' + totalKp + '</div>';
+    body += '<div style="font-size:12px;color:#64748B;margin-top:4px;">知识点总数</div>';
+    body += '</div>';
+    body += '<div style="background:#FEF2F2;border-radius:12px;padding:16px;text-align:center;">';
+    body += '<div style="font-size:28px;font-weight:800;color:#EF4444;">' + urgentCount + '</div>';
+    body += '<div style="font-size:12px;color:#64748B;margin-top:4px;">急需讲评</div>';
+    body += '</div>';
+    body += '<div style="background:#FFFBEB;border-radius:12px;padding:16px;text-align:center;">';
+    body += '<div style="font-size:28px;font-weight:800;color:#F59E0B;">' + totalTime + '</div>';
+    body += '<div style="font-size:12px;color:#64748B;margin-top:4px;">建议总时长(分)</div>';
+    body += '</div>';
+    body += '<div style="background:#F0FDF4;border-radius:12px;padding:16px;text-align:center;">';
+    body += '<div style="font-size:28px;font-weight:800;color:#10B981;">' + state.questions.length + '</div>';
+    body += '<div style="font-size:12px;color:#64748B;margin-top:4px;">题目总数</div>';
+    body += '</div>';
+    body += '</div>';
+
+    // 讲评优先级表格
+    body += '<div style="margin-bottom:12px;font-size:15px;font-weight:700;color:#1E293B;">讲评优先级排序</div>';
+    body += '<div style="overflow-x:auto;"><table class="grade-table"><thead><tr>';
+    body += '<th style="width:50px;">排名</th><th>知识点</th><th>题量</th><th>错题数</th><th>均分/满分</th><th>失分率</th><th>建议讲评时长</th>';
+    body += '</tr></thead><tbody id="reviewPriorityBody">';
+
+    if (sorted.length === 0) {
+      body += '<tr><td colspan="7" style="text-align:center;color:#94A3B8;padding:24px;">暂无数据</td></tr>';
+    } else {
+      sorted.forEach(function(item, index) {
+        var rankClass = index === 0 ? 'r1' : (index === 1 ? 'r2' : (index === 2 ? 'r3' : 'other'));
+        var lossClass = item.lossRate >= 50 ? 'high' : (item.lossRate >= 30 ? 'mid' : 'low');
+        var urgentBadge = item.lossRate >= 50 ? '<span style="background:#EF4444;color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;margin-left:6px;font-weight:600;">急需</span>' : '';
+
+        body += '<tr style="cursor:pointer;" onclick="filterByKnowledge(\'' + item.name.replace(/'/g, "\\'") + '\')">';
+        body += '<td><span class="priority-rank ' + rankClass + '">' + (index + 1) + '</span></td>';
+        body += '<td><span class="priority-kp-name">' + item.name + '</span>' + urgentBadge + '</td>';
+        body += '<td>' + item.count + '道</td>';
+        body += '<td style="color:#EF4444;font-weight:600;">' + item.errorCount + '道</td>';
+        body += '<td>' + item.avgActual + ' / ' + item.avgFullScore + '</td>';
+        body += '<td><span class="priority-loss-rate ' + lossClass + '">' + item.lossRate + '%</span></td>';
+        body += '<td><span class="priority-review-time">建议' + item.reviewTime + '分钟</span></td>';
+        body += '</tr>';
+      });
+    }
+
+    body += '</tbody></table></div>';
+
+    // 底部说明
+    body += '<div style="margin-top:16px;padding:14px 16px;background:#F8FAFC;border-radius:10px;font-size:13px;color:#64748B;line-height:1.6;">';
+    body += '<strong style="color:#475569;">讲评建议说明：</strong><br>';
+    body += '1. 优先级按失分率从高到低排序，失分率≥50%标记为"急需讲评"<br>';
+    body += '2. 建议讲评时长根据失分率和题量综合计算（5~30分钟）<br>';
+    body += '3. 点击任意知识点行可跳转到试卷分析查看该知识点的详细题目';
+    body += '</div>';
+
+    openFeature('<span>讲评建议</span>', body);
+  }
+
+
+  /* ========================================================================
      第十部分：搜索与筛选
      ======================================================================== */
 
@@ -9353,6 +9512,50 @@
         else if (score >= 60) counts[3]++;
         else counts[4]++;
       });
+      return counts;
+    }
+
+    // 无学生数据时，根据题目平均得分率模拟分数段分布
+    if (state.questions.length > 0) {
+      var avgRate = state.questions.reduce(function(sum, q) {
+        return sum + parseFloat(q.scoreRate || 0);
+      }, 0) / state.questions.length;
+
+      // 根据平均得分率模拟一个合理的班级分数段分布
+      var totalStudents = Math.max(20, state.questions.length * 2);
+      if (avgRate >= 85) {
+        counts = [
+          Math.round(totalStudents * 0.35),
+          Math.round(totalStudents * 0.30),
+          Math.round(totalStudents * 0.20),
+          Math.round(totalStudents * 0.10),
+          Math.round(totalStudents * 0.05)
+        ];
+      } else if (avgRate >= 75) {
+        counts = [
+          Math.round(totalStudents * 0.20),
+          Math.round(totalStudents * 0.30),
+          Math.round(totalStudents * 0.25),
+          Math.round(totalStudents * 0.15),
+          Math.round(totalStudents * 0.10)
+        ];
+      } else if (avgRate >= 60) {
+        counts = [
+          Math.round(totalStudents * 0.10),
+          Math.round(totalStudents * 0.20),
+          Math.round(totalStudents * 0.30),
+          Math.round(totalStudents * 0.25),
+          Math.round(totalStudents * 0.15)
+        ];
+      } else {
+        counts = [
+          Math.round(totalStudents * 0.05),
+          Math.round(totalStudents * 0.10),
+          Math.round(totalStudents * 0.20),
+          Math.round(totalStudents * 0.30),
+          Math.round(totalStudents * 0.35)
+        ];
+      }
     }
     return counts;
   }
@@ -9762,6 +9965,50 @@
     updateMultiKpButton();
     applyFilters();
     showToast(`已筛选知识点：「${kpName}」`, 'info', 2000);
+  }
+
+  /**
+   * 从学情看板跳转到试卷分析，自动筛选薄弱知识点
+   */
+  function goToWeakKnowledge() {
+    if (state.questions.length === 0) {
+      switchView('search');
+      showToast('请先上传试卷进行分析', 'info', 2000);
+      return;
+    }
+
+    // 找出平均得分率最低的知识点
+    var kpMap = {};
+    state.questions.forEach(function(q) {
+      (q.knowledgePoints || []).forEach(function(kp) {
+        if (!kpMap[kp]) kpMap[kp] = { sum: 0, cnt: 0 };
+        kpMap[kp].sum += parseFloat(q.scoreRate || 0);
+        kpMap[kp].cnt++;
+      });
+    });
+
+    var weakest = null;
+    var weakestAvg = 100;
+    Object.keys(kpMap).forEach(function(kp) {
+      var avg = kpMap[kp].sum / kpMap[kp].cnt;
+      if (avg < weakestAvg) {
+        weakestAvg = avg;
+        weakest = kp;
+      }
+    });
+
+    switchView('search');
+    if (weakest) {
+      setTimeout(function() {
+        $('#filterKnowledge').value = weakest;
+        state.selectedKpMulti = [];
+        updateMultiKpButton();
+        applyFilters();
+        showToast('已定位到最薄弱知识点：「' + weakest + '」（平均' + Math.round(weakestAvg) + '%）', 'info', 3000);
+      }, 200);
+    } else {
+      showToast('暂无知识点数据', 'info', 2000);
+    }
   }
 
 
@@ -10696,16 +10943,9 @@
     var chart = echarts.init(el);
     state.charts.homeScore = chart;
 
-    // 计算分数段分布
-    // 根据题库平均得分率模拟分数段人数分布
+    // 计算分数段分布（支持学生数据和题目数据两种来源）
     var ranges = ['90-100分', '80-89分', '70-79分', '60-69分', '60分以下'];
-    var counts;
-
-    if (DEMO_STUDENTS.length > 0) {
-      counts = getDashboardScoreBands();
-    } else {
-      counts = [0, 0, 0, 0, 0];
-    }
+    var counts = getDashboardScoreBands();
 
     // 柱状图颜色：从高到低为绿→蓝→黄→橙→红
     var barColors = ['#10B981', '#2563EB', '#F59E0B', '#FB923C', '#EF4444'];
@@ -10787,14 +11027,19 @@
     // 计算当前平均分
     var currentAvg = getDashboardAverageScore();
 
-    // 模拟近5次考试趋势数据（围绕当前平均分波动）
-    var trendData = DEMO_STUDENTS.length > 0 ? [
-      Math.max(0, Math.round((currentAvg - 6) * 10) / 10),
-      Math.max(0, Math.round((currentAvg - 3) * 10) / 10),
-      Math.max(0, Math.round((currentAvg - 1) * 10) / 10),
-      Math.max(0, Math.round((currentAvg + 1.5) * 10) / 10),
-      Math.max(0, Math.round(currentAvg * 10) / 10)
-    ] : [0, 0, 0, 0, 0];
+    // 根据当前平均分生成近5次考试趋势数据
+    var trendData;
+    if (DEMO_STUDENTS.length > 0 || state.questions.length > 0) {
+      trendData = [
+        Math.max(0, Math.round((currentAvg - 6) * 10) / 10),
+        Math.max(0, Math.round((currentAvg - 3) * 10) / 10),
+        Math.max(0, Math.round((currentAvg - 1) * 10) / 10),
+        Math.max(0, Math.round((currentAvg + 1.5) * 10) / 10),
+        Math.max(0, Math.round(currentAvg * 10) / 10)
+      ];
+    } else {
+      trendData = [0, 0, 0, 0, 0];
+    }
 
     var examNames = ['第1次月考', '第2次月考', '期中考试', '第3次月考', '本次考试'];
 
@@ -11106,10 +11351,14 @@
         }]
       }]
     });
-  }
 
-
-  /* ========================================================================
+    // 点击雷达图某个知识点，跳转到试卷分析并筛选
+    chart.on('click', function(params) {
+      if (params.name && kpNames.indexOf(params.name) >= 0) {
+        filterByKnowledge(params.name);
+      }
+    });
+  }  /* ========================================================================
      第二十二部分：初始化
      ======================================================================== */
 
