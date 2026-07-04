@@ -4057,8 +4057,10 @@
     }
 
     body.mobile-ua {
-      height: 100dvh;
-      overflow: hidden;
+      min-height: 100vh;
+      height: auto;
+      overflow-x: hidden;
+      overflow-y: auto;
       background: var(--color-bg);
     }
 
@@ -4155,13 +4157,16 @@
 
     body.mobile-ua .main {
       margin-left: 0;
-      height: 100dvh;
+      min-height: 100vh;
+      height: auto;
       padding-bottom: calc(68px + env(safe-area-inset-bottom));
     }
 
     body.mobile-ua .view {
       max-width: none;
-      padding: 0 14px 18px;
+      min-height: calc(100vh - 68px);
+      overflow: visible;
+      padding: 0 14px calc(86px + env(safe-area-inset-bottom));
       -webkit-overflow-scrolling: touch;
       scroll-padding-bottom: 90px;
     }
