@@ -7622,11 +7622,12 @@
       }
     }).catch(function(err) {
       console.error('口算照片识别失败:', err);
-      // 根据错误类型显示不同提示
-      if (err.message === '后端服务未连接' || err.message === '请先登录') {
-        showMentalMathRecognitionError(err.message === '请先登录' ? '请先登录后再使用照片识别功能' : '需要连接后端服务才能识别图片，请确保服务已部署并登录');
+      if (err.message === '后端服务未连接') {
+        showMentalMathRecognitionError('需要连接后端服务才能识别图片，请确保服务已部署并登录');
+      } else if (err.message === '请先登录') {
+        showMentalMathRecognitionError('请先登录后再使用照片识别功能');
       } else {
-        showMentalMathRecognitionError();
+        showMentalMathRecognitionError(err.message || '无法从图片中识别出口算题目');
       }
     });
   }
