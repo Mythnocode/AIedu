@@ -7668,68 +7668,30 @@
     if (!blob) throw new Error('图片格式无效');
 
     var formData = new FormData();
-    formData.append('mode', 'default');
-    formData.append('title', '口算批改');
-    formData.append('images', blob, 'mental_math.jpg');
+    formData.append('files', blob, 'mental_math.jpg');
 
-    // 调用后端分析接口
-    var data = await apiFetch('/api/papers/analyze', {
+    // 调用口算 OCR 专用接口
+    var data = await apiFetch('/api/mental-math/ocr', {
       method: 'POST',
       body: formData,
     });
 
-    var questions = normalizeQuestions(data.result && data.result.questions ? data.result.questions : []);
-    if (!questions || questions.length === 0) return null;
+    var problems = data.problems;
+    if (!problems || problems.length === 0) return null;
 
-    // 将识别到的题目转换为口算题格式
-    var problems = [];
-    questions.forEach(function(q) {
-      // 尝试从题目文本中提取算式
-      var expr = extractMathExpression(q.question);
-      if (expr) {
-        var answer = evalMathExpression(expr);
-        if (answer !== null) {
-          problems.push({ text: expr, answer: answer, original: q });
-        }
-      }
+    // 给每个题目标注标准答案
+    problems.forEach(function(p) {
+      var calc = p.text.replace(/\u00d7/g, '*').replace(/\u00f7/g, '/').replace(/\u2212/g, '-');
+      if (!/^[\d\s+\-*/().]+$/.test(calc)) return;
+      try {
+        var result = Function('"use strict"; return (' + calc + ')')();
+        p.answer = Number.isInteger(result) ? result : Math.round(result * 100) / 100;
+      } catch (e) {}
     });
 
-    return problems.length > 0 ? problems : null;
+    return problems;
   }
 
-  /**
-   * 从文本中提取数学算式（如 "3 + 5 = ?" → "3 + 5"）
-   */
-  function extractMathExpression(text) {
-    if (!text) return null;
-    // 匹配数字+运算符+数字的模式
-    var match = text.match(/(-?\d+)\s*([+\u2212\u00d7\u00f7\u00b7\u2014\-*/xX])\s*(-?\d+)/);
-    if (!match) return null;
-    var a = match[1];
-    var op = match[2];
-    var b = match[3];
-    // 统一运算符
-    op = op.replace('\u2212', '-').replace('\u00d7', '\u00d7').replace('\u00f7', '\u00f7').replace('\u00b7', '\u00d7').replace('\u2014', '-').replace(/x/i, '\u00d7');
-    return a + ' ' + op + ' ' + b;
-  }
-
-  /**
-   * 计算数学表达式
-   */
-  function evalMathExpression(expr) {
-    try {
-      // 将显示符号转为可计算符号
-      var calc = expr.replace(/\u00d7/g, '*').replace(/\u00f7/g, '/').replace(/\u2212/g, '-');
-      // 安全计算（仅允许数字和运算符）
-      if (!/^[\d\s+\-*/().]+$/.test(calc)) return null;
-      var result = Function('"use strict"; return (' + calc + ')')();
-      // 取整（口算题答案为整数）
-      if (Number.isInteger(result)) return result;
-      return Math.round(result * 100) / 100;
-    } catch (e) {
-      return null;
-    }
-  }
   /**
    * dataURL 转 Blob
    */

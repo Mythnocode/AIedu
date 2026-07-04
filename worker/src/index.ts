@@ -130,6 +130,11 @@ export default {
         return await handleEssayGrading(request, env, corsHeaders, user);
       }
 
+      if (url.pathname === '/api/mental-math/ocr' && request.method === 'POST') {
+        const user = await requireUser(request, env);
+        return await handleMentalMathOcr(request, env, corsHeaders, user);
+      }
+
       if (url.pathname === '/api/questions' && request.method === 'GET') {
         const user = await requireUser(request, env);
         return await handleListQuestions(env, corsHeaders, user);
@@ -630,6 +635,114 @@ function normalizeEssayResult(
     weaknesses: toStringArray(value.weaknesses, ['暂无具体不足']),
     suggestions: toStringArray(value.suggestions, ['建议多读多写，持续提升写作水平']),
   };
+}
+
+/**
+ * 口算批改 OCR：用百度 OCR 识别图片文字，再用 DeepSeek 提取算式和答案。
+ */
+async function handleMentalMathOcr(
+  request: Request,
+  env: Env,
+  corsHeaders: HeadersInit,
+  user: AuthUser,
+): Promise<Response> {
+  const formData = await request.formData();
+  const files: File[] = [];
+  for (const entry of formData.getAll('files')) {
+    if (isUploadedFile(entry)) files.push(entry);
+  }
+  if (files.length === 0) {
+    throw new HttpError(400, '请先上传口算题图片。');
+  }
+  if (files.length > 3) {
+    throw new HttpError(400, '一次最多上传 3 张口算题图片。');
+  }
+  const totalSize = files.reduce((s, f) => s + f.size, 0);
+  if (totalSize > MAX_TOTAL_FILE_SIZE) {
+    throw new HttpError(400, '图片总大小超过 8MB，请压缩后重试。');
+  }
+  for (const file of files) {
+    validateUploadedFile(file);
+  }
+
+  assertBaiduConfigured(env);
+  assertDeepSeekConfigured(env);
+
+  const allOcrLines: string[] = [];
+  for (const file of files) {
+    if (!file.type.startsWith('image/')) continue;
+    const imageBase64 = await fileToBase64(file);
+    const ocrText = await recognizeAccurateBasicWithBaidu(imageBase64, env);
+    allOcrLines.push(ocrText);
+  }
+
+  const combinedText = allOcrLines.join('\n---\n');
+  if (!combinedText.trim()) {
+    throw new HttpError(400, 'OCR 未识别到有效文字，请换一张更清晰的图片。');
+  }
+
+  const prompt = [
+    '你是一位数学教师，以下是 OCR 从口算题图片中识别出的文字（可能有识别错误）：',
+    '',
+    combinedText,
+    '',
+    '请从以上文字中提取所有口算算式，每行一条，格式为：算式 = 答案。',
+    '例如：3 + 5 = 8',
+    '只输出算式，不要输出编号、说明或其他内容。',
+    '把 × ÷ 符号保留原样输出。',
+    '如果某行明显不是算式，请忽略它。',
+  ].join('\n');
+
+  const response = await fetch('https://api.deepseek.com/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${env.DEEPSEEK_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: env.DEEPSEEK_MODEL || 'deepseek-chat',
+      temperature: 0.1,
+      messages: [
+        { role: 'system', content: '你只输出从 OCR 文字中提取出的数学算式，每行一个，格式如 "1 + 2 = 3"。' },
+        { role: 'user', content: prompt },
+      ],
+    }),
+  });
+
+  const payload = (await response.json().catch(() => null)) as {
+    choices?: Array<{ message?: { content?: string } }>;
+    error?: { message?: string };
+  } | null;
+
+  if (!response.ok) {
+    throw new Error(`DeepSeek 提取算式失败：${payload?.error?.message || response.statusText}`);
+  }
+
+  const content = payload?.choices?.[0]?.message?.content;
+  if (!content || !content.trim()) {
+    throw new Error('DeepSeek 未返回有效结果。');
+  }
+
+  const problems: Array<{ text: string; answer: number }> = [];
+  for (const line of content.split('\n')) {
+    const trimmed = line.trim();
+    const match = trimmed.match(/([\d\s+\-×÷\u00d7\u00f7\u2212]+)\s*=\s*(-?\d+\.?\d*)/);
+    if (match) {
+      const expr = match[1].trim();
+      const answer = parseInt(match[2], 10);
+      if (!isNaN(answer)) {
+        problems.push({ text: expr, answer });
+      }
+    }
+  }
+
+  if (problems.length === 0) {
+    throw new HttpError(400, '未能从图片中识别出有效口算题，请确保图片包含数学算式。');
+  }
+
+  await logUsage(env, user.id, 'mental_math_ocr', 'baidu-ocr+deepseek', `Extracted ${problems.length} problems`);
+
+  return json({ problems }, 200, corsHeaders);
 }
 
 /**
