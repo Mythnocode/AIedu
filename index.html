@@ -5201,6 +5201,7 @@
     selectedKpMulti: [],        // 多选知识点
     cameraStream: null,         // 摄像头流
     voiceRecognition: null,    // 语音识别实例
+    lastScannedPhotos: [],     // 最近扫描的试卷图片（供批改API使用）
   };
 
 
@@ -5458,7 +5459,10 @@
 
     body += '</tbody></table></div>';
     body += '<div class="feature-footer" style="border-top:none;padding:20px 0 0;justify-content:space-between;">';
-    body += '<div style="font-size:13px;color:var(--color-text-muted);">共 ' + questions.length + ' 道题 · 满分 ' + totalMax + ' 分</div>';
+    var photoHint = (state.lastScannedPhotos && state.lastScannedPhotos.length > 0)
+      ? '<span style="color:#10B981;">已保存 ' + state.lastScannedPhotos.length + ' 张试卷图片，可直接批改</span>'
+      : '<span style="color:#F59E0B;">无试卷图片，点击批改后请上传含答案的试卷图片</span>';
+    body += '<div style="font-size:13px;color:var(--color-text-muted);">' + photoHint + ' · 共 ' + questions.length + ' 道题 · 满分 ' + totalMax + ' 分</div>';
     body += '<div style="display:flex;gap:12px;">';
     body += '<button class="feat-btn feat-btn--ghost" onclick="closeFeature();openScanPaper()">扫描新试卷</button>';
     body += '<button class="feat-btn feat-btn--ghost" onclick="exportGradeReport()">导出成绩单</button>';
@@ -5475,15 +5479,171 @@
     var btn = $('#gradeRunBtn');
     if (btn) { btn.disabled = true; btn.textContent = '批改中...'; }
 
-    var questions = state.questions;
+    // 如果有扫描图片，调用真实批改API
+    if (state.lastScannedPhotos && state.lastScannedPhotos.length > 0) {
+      runRealAutoGrade(total, btn);
+    } else {
+      // 没有扫描图片，提示用户上传试卷图片进行批改
+      runAutoGradeWithUpload(total, btn);
+    }
+  }
+
+  /**
+   * 使用扫描图片进行真实AI批改
+   */
+  async function runRealAutoGrade(total, btn) {
+    if (!state.apiAvailable) {
+      showToast('请先连接后端服务再进行批改', 'warning', 5000);
+      if (btn) { btn.disabled = false; btn.textContent = '一键批改'; }
+      return;
+    }
+    if (!state.user) {
+      openAuthModal('login');
+      if (btn) { btn.disabled = false; btn.textContent = '一键批改'; }
+      return;
+    }
+
+    // 显示批改进度
+    showProgress(
+      '<svg viewBox="0 0 24 24" style="width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><path d="M6 3 L18 3 L18 21 L6 21 Z"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>',
+      '正在仔细识别试卷并批改...',
+      '准备识别 ' + state.lastScannedPhotos.length + ' 页试卷'
+    );
+    updateProgress(20, 'AI正在识别题目和手写答案...', 'GPT Vision 识别中');
+
+    try {
+      var formData = new FormData();
+      for (var i = 0; i < state.lastScannedPhotos.length; i++) {
+        var blob = dataURLtoBlob(state.lastScannedPhotos[i]);
+        if (blob) {
+          formData.append('files', blob, 'paper_' + i + '.jpg');
+        }
+      }
+
+      updateProgress(50, 'AI正在逐题批改...', 'DeepSeek 评估答案正确性');
+
+      var data = await apiFetch('/api/papers/grade', {
+        method: 'POST',
+        body: formData,
+      });
+
+      updateProgress(90, '批改完成，正在更新结果...', '');
+
+      var gradedQuestions = normalizeQuestions(
+        data.result && data.result.questions ? data.result.questions : []
+      );
+
+      if (gradedQuestions.length > 0) {
+        // 更新题库中的得分率
+        state.questions = gradedQuestions;
+        saveQuestions();
+        updateUI();
+
+        // 逐题动画展示批改结果
+        animateGradeResults(gradedQuestions, btn);
+
+        updateProgress(100, '批改完成！', '共批改 ' + gradedQuestions.length + ' 道题');
+        setTimeout(function() { hideProgress(); }, 1500);
+      } else {
+        hideProgress();
+        showToast('未能识别出试卷内容，请确保图片清晰且包含题目和答案', 'warning', 5000);
+        if (btn) { btn.disabled = false; btn.textContent = '一键批改'; }
+      }
+    } catch (e) {
+      hideProgress();
+      var errMsg = (e && e.message) ? e.message : '批改失败';
+      showToast('批改失败：' + errMsg, 'error', 5000);
+      if (btn) { btn.disabled = false; btn.textContent = '一键批改'; }
+    }
+  }
+
+  /**
+   * 没有扫描图片时，让用户上传试卷图片进行批改
+   */
+  function runAutoGradeWithUpload(total, btn) {
+    if (!state.apiAvailable) {
+      showToast('请先连接后端服务再进行批改', 'warning', 5000);
+      if (btn) { btn.disabled = false; btn.textContent = '一键批改'; }
+      return;
+    }
+    if (!state.user) {
+      openAuthModal('login');
+      if (btn) { btn.disabled = false; btn.textContent = '一键批改'; }
+      return;
+    }
+
+    // 创建文件选择器
+    var fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    fileInput.multiple = true;
+    fileInput.style.display = 'none';
+
+    fileInput.addEventListener('change', async function(e) {
+      var files = e.target.files;
+      if (!files || files.length === 0) {
+        if (btn) { btn.disabled = false; btn.textContent = '一键批改'; }
+        return;
+      }
+
+      // 转为 dataURL
+      var dataUrls = [];
+      for (var i = 0; i < files.length; i++) {
+        var dataUrl = await fileToDataURL(files[i]);
+        if (dataUrl) dataUrls.push(dataUrl);
+      }
+
+      if (dataUrls.length === 0) {
+        showToast('无法读取图片文件', 'error');
+        if (btn) { btn.disabled = false; btn.textContent = '一键批改'; }
+        return;
+      }
+
+      // 保存图片并执行真实批改
+      state.lastScannedPhotos = dataUrls;
+      runRealAutoGrade(total, btn);
+    });
+
+    document.body.appendChild(fileInput);
+    fileInput.click();
+    document.body.removeChild(fileInput);
+  }
+
+  /**
+   * 逐题动画展示批改结果
+   */
+  function animateGradeResults(questions, btn) {
     var i = 0;
 
     function gradeNext() {
-      if (i >= total) {
+      if (i >= questions.length) {
         if (btn) { btn.disabled = false; btn.textContent = '批改完成'; btn.style.background = 'var(--color-success)'; }
-        showToast('批改完成！共批改 ' + total + ' 道题', 'success');
+
+        // 更新统计区
+        var totalScore = 0, totalMax = 0;
+        var correctCount = 0, wrongCount = 0;
+        questions.forEach(function(q) {
+          totalMax += q.score || 0;
+          var earned = Math.round((q.score || 0) * (q.scoreRate || 0) / 100);
+          totalScore += earned;
+          if ((q.scoreRate || 0) >= 60) correctCount++; else wrongCount++;
+        });
+        var avgRate = questions.length > 0 ? Math.round(questions.reduce(function(s, q) { return s + (q.scoreRate || 0); }, 0) / questions.length) : 0;
+
+        // 更新顶部统计
+        var summaryCards = document.querySelectorAll('.grade-summary-card');
+        if (summaryCards.length >= 4) {
+          summaryCards[0].querySelector('.grade-summary-value').textContent = totalScore;
+          summaryCards[0].querySelector('.grade-summary-label').textContent = '总得分 / ' + totalMax;
+          summaryCards[1].querySelector('.grade-summary-value').textContent = correctCount;
+          summaryCards[2].querySelector('.grade-summary-value').textContent = wrongCount;
+          summaryCards[3].querySelector('.grade-summary-value').textContent = avgRate + '%';
+        }
+
+        showToast('批改完成！正确 ' + correctCount + ' 题，错误 ' + wrongCount + ' 题', 'success', 4000);
         return;
       }
+
       var q = questions[i];
       var earnedScore = Math.round((q.score || 0) * (q.scoreRate || 0) / 100);
       var rate = q.scoreRate || 0;
@@ -5496,8 +5656,15 @@
       var rateCell = $('#gradeRate-' + i);
       var statusCell = $('#gradeStatus-' + i);
 
-      if (scoreCell) scoreCell.textContent = earnedScore;
-      if (barCell) { barCell.style.transition = 'width 0.3s ease'; barCell.style.width = rate + '%'; }
+      if (scoreCell) {
+        scoreCell.textContent = earnedScore;
+        // 如果有批改评语，添加tooltip
+        if (q.feedback) {
+          scoreCell.title = q.feedback;
+          scoreCell.style.cursor = 'help';
+        }
+      }
+      if (barCell) { barCell.style.transition = 'width 0.4s ease'; barCell.style.width = rate + '%'; }
       if (rateCell) rateCell.textContent = rate + '%';
       if (statusCell) {
         statusCell.className = 'grade-status-tag grade-status--' + statusClass;
@@ -5505,9 +5672,22 @@
       }
 
       i++;
-      window._dictationTimer = setTimeout(gradeNext, 120);
+      setTimeout(gradeNext, 150);
     }
+
     gradeNext();
+  }
+
+  /**
+   * 文件转 dataURL
+   */
+  function fileToDataURL(file) {
+    return new Promise(function(resolve) {
+      var reader = new FileReader();
+      reader.onload = function(e) { resolve(e.target.result); };
+      reader.onerror = function() { resolve(null); };
+      reader.readAsDataURL(file);
+    });
   }
 
   function exportGradeReport() {
@@ -7743,6 +7923,9 @@
     if (allQuestions.length > 0) {
       updateProgress(100, '分析完成！', '共识别到 ' + allQuestions.length + ' 道题目');
 
+      // 保存扫描图片供批改使用
+      state.lastScannedPhotos = scanPaperPhotos.slice();
+
       // 替换题库（每次分析覆盖之前的数据，避免无限增长）
       state.questions = allQuestions;
       saveQuestions();
@@ -8676,6 +8859,9 @@
       scoreRate: q.scoreRate !== undefined ? q.scoreRate : (q.rate !== undefined ? q.rate : 60),
       question: q.question || q.content || q.text || '未知题目',
       answer: q.answer || q.analysis || '',
+      studentAnswer: q.studentAnswer || '',
+      isCorrect: q.isCorrect === true,
+      feedback: q.feedback || '',
     }));
   }
 

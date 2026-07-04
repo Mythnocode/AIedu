@@ -34,6 +34,9 @@ type Question = {
   text?: string;
   answer?: string;
   analysis?: string;
+  studentAnswer?: string;
+  isCorrect?: boolean;
+  feedback?: string;
 };
 
 type AnalysisResult = {
@@ -115,6 +118,11 @@ export default {
       if (url.pathname === '/api/papers/analyze' && request.method === 'POST') {
         const user = await requireUser(request, env);
         return await handleAnalyzePaper(request, env, corsHeaders, user);
+      }
+
+      if (url.pathname === '/api/papers/grade' && request.method === 'POST') {
+        const user = await requireUser(request, env);
+        return await handleGradePaper(request, env, corsHeaders, user);
       }
 
       if (url.pathname === '/api/questions' && request.method === 'GET') {
@@ -355,6 +363,257 @@ async function handleAnalyzePaper(
   });
 
   return json({ paper, result }, 200, corsHeaders);
+}
+
+/**
+ * 试卷自动批改：使用 GPT Vision 识别试卷图片中的题目和手写答案，
+ * 再用 DeepSeek 逐题评估答案正确性，返回真实批改结果。
+ */
+async function handleGradePaper(
+  request: Request,
+  env: Env,
+  corsHeaders: HeadersInit,
+  user: AuthUser,
+): Promise<Response> {
+  const formData = await request.formData();
+  const files: File[] = [];
+  for (const entry of formData.getAll('files')) {
+    if (isUploadedFile(entry)) files.push(entry);
+  }
+
+  if (files.length === 0) {
+    throw new HttpError(400, '请先上传试卷图片再进行批改。');
+  }
+
+  if (files.length > MAX_FILES) {
+    throw new HttpError(400, `一次最多批改 ${MAX_FILES} 张图片。`);
+  }
+
+  const totalFileSize = files.reduce((sum, file) => sum + file.size, 0);
+  if (totalFileSize > MAX_TOTAL_FILE_SIZE) {
+    throw new HttpError(400, '图片总大小超过 8MB，请减少页数或压缩后重试。');
+  }
+
+  for (const file of files) {
+    validateUploadedFile(file);
+  }
+
+  assertOpenAiConfigured(env);
+  assertDeepSeekConfigured(env);
+
+  // 第一步：用 GPT Vision 识别试卷图片中的题目内容和学生作答
+  const recognizedText = await extractPaperContentWithVision(files, env);
+
+  // 第二步：用 DeepSeek 逐题批改
+  const gradeResult = await gradeWithDeepSeek(recognizedText, env);
+
+  // 更新数据库中题目的得分率
+  await updateQuestionScores(env, user, gradeResult.questions);
+
+  await logUsage(env, user.id, 'paper_grade', 'gpt-vision+deepseek', `Graded ${gradeResult.questions.length} questions`);
+
+  return json({ result: gradeResult }, 200, corsHeaders);
+}
+
+/**
+ * 使用 GPT Vision 识别试卷图片，提取题目内容和学生手写答案
+ */
+async function extractPaperContentWithVision(files: File[], env: Env): Promise<string> {
+  const parts: string[] = [];
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    if (!file.type.startsWith('image/')) continue;
+
+    const imageBase64 = await fileToBase64(file);
+    const mimeType = file.type || 'image/jpeg';
+    const dataUrl = `data:${mimeType};base64,${imageBase64}`;
+
+    const response = await fetch(`${(env.GPT_API_BASE || 'https://geekspace.cloud/v1').replace(/\/+$/, '')}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.GEEKSPACE_API_KEY || env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: env.OPENAI_MODEL || 'gpt-5.5',
+        temperature: 0.1,
+        messages: [
+          {
+            role: 'system',
+            content: '你是一个专业的试卷识别助手。你需要仔细识别试卷图片中的所有内容，包括印刷的题目和手写的答案。请严格按照要求输出。',
+          },
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: [
+                  '请仔细识别这张试卷图片（第' + (i + 1) + '页）中的所有内容。',
+                  '',
+                  '识别要求：',
+                  '1. 识别每道题的题号、题型、题目内容',
+                  '2. 识别学生在每道题上手写的答案（包括手写数字、文字、算式、图形标注等）',
+                  '3. 如果是选择题/判断题，识别学生选择的选项（A/B/C/D 或 √/×）',
+                  '4. 如果是填空题，识别学生填写的答案',
+                  '5. 如果是解答题/计算题，识别学生完整的解答过程',
+                  '6. 无论是印刷体还是手写体，都要尽可能准确地识别',
+                  '',
+                  '输出格式（每道题用如下格式）：',
+                  '【题号】第X题',
+                  '【题型】选择题/填空题/判断题/解答题/计算题/其他',
+                  '【题目】完整的题目内容',
+                  '【学生答案】学生写下的答案（如果未作答则写"未作答"）',
+                  '---',
+                  '',
+                  '请逐题输出，不要遗漏任何题目。即使手写字迹不太清晰，也要尽力识别并标注。',
+                ].join('\n'),
+              },
+              { type: 'image_url', image_url: { url: dataUrl } },
+            ],
+          },
+        ],
+      }),
+    });
+
+    const payload = (await response.json().catch(() => null)) as {
+      choices?: Array<{ message?: { content?: string } }>;
+      error?: { message?: string };
+    } | null;
+
+    if (!response.ok) {
+      const errMsg = payload?.error?.message || response.statusText;
+      throw new Error(`GPT 试卷识别失败：${errMsg.slice(0, 100)}`);
+    }
+
+    const text = payload?.choices?.[0]?.message?.content;
+    if (text) {
+      parts.push(text.trim());
+    }
+  }
+
+  const combined = parts.join('\n\n=== 下一页 ===\n\n').trim();
+  if (!combined) {
+    throw new Error('未能从图片中识别出任何试卷内容，请确保图片清晰且包含试卷内容。');
+  }
+
+  return combined.length > MAX_ANALYSIS_TEXT_LENGTH ? combined.slice(0, MAX_ANALYSIS_TEXT_LENGTH) : combined;
+}
+
+/**
+ * 使用 DeepSeek 逐题批改学生答案
+ */
+async function gradeWithDeepSeek(recognizedText: string, env: Env): Promise<AnalysisResult> {
+  const prompt = [
+    '你是一位经验丰富、严谨负责的教师，正在批改学生的试卷。',
+    '请根据以下识别到的试卷内容（包含题目和学生答案），逐题进行批改。',
+    '',
+    '批改要求：',
+    '1. 仔细阅读每道题的题目内容',
+    '2. 根据题目内容判断正确答案',
+    '3. 将学生答案与正确答案进行对比',
+    '4. 判断学生答案是否正确：',
+    '   - 完全正确：得分率100%',
+    '   - 基本正确但有小的计算错误/拼写错误：得分率60-80%',
+    '   - 方法正确但结果错误：得分率40-60%',
+    '   - 完全错误或未作答：得分率0%',
+    '5. 对于解答题/计算题，要考虑解题过程是否完整、方法是否正确',
+    '6. 对于选择题/判断题，只有完全选对才给100%，选错给0%',
+    '7. 对于填空题，答案完全一致给100%，部分正确给50%',
+    '',
+    '输出 JSON 对象，包含以下字段：',
+    '- summary: 批改总结',
+    '- subject: 学科',
+    '- grade: 年级',
+    '- questionCount: 题目总数',
+    '- knowledgeCoverage: 知识点覆盖（数组，每项含name和count）',
+    '- difficultyDistribution: 难度分布（easy/medium/hard）',
+    '- questionTypes: 题型分布（数组，每项含type和count）',
+    '- weakPoints: 薄弱知识点列表',
+    '- lectureSuggestions: 讲评建议',
+    '- questions: 题目数组，每项必须包含：',
+    '  - type: 题型',
+    '  - knowledgePoints: 知识点数组',
+    '  - difficulty: 简单/中等/困难',
+    '  - score: 满分',
+    '  - scoreRate: 得分率（0-100的整数，基于答案正确性给出）',
+    '  - question: 题目内容',
+    '  - answer: 正确答案',
+    '  - studentAnswer: 学生写的答案',
+    '  - isCorrect: true/false（是否完全正确）',
+    '  - feedback: 批改评语（说明扣分原因）',
+    '',
+    '不要输出 Markdown，直接输出 JSON 对象。',
+    '',
+    '识别到的试卷内容：',
+    recognizedText.slice(0, MAX_ANALYSIS_TEXT_LENGTH),
+  ].join('\n');
+
+  const response = await fetch('https://api.deepseek.com/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${env.DEEPSEEK_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: env.DEEPSEEK_MODEL || 'deepseek-chat',
+      temperature: 0.2,
+      response_format: { type: 'json_object' },
+      messages: [
+        {
+          role: 'system',
+          content: '你只输出符合要求的 JSON 对象。批改要严格、客观、准确，基于学生实际作答内容评分。',
+        },
+        { role: 'user', content: prompt },
+      ],
+    }),
+  });
+
+  const payload = (await response.json().catch(() => null)) as {
+    choices?: Array<{ message?: { content?: string } }>;
+    error?: { message?: string };
+  } | null;
+
+  if (!response.ok) {
+    throw new Error(`DeepSeek 批改失败：${payload?.error?.message || response.statusText}`);
+  }
+
+  const content = payload?.choices?.[0]?.message?.content;
+  if (!content) {
+    throw new Error('DeepSeek 未返回有效批改结果。');
+  }
+
+  return normalizeAnalysis(parseJsonObject(content));
+}
+
+/**
+ * 更新数据库中题目的得分率
+ */
+async function updateQuestionScores(env: Env, user: AuthUser, questions: Required<Question>[]): Promise<void> {
+  // 批改结果直接更新最近一次分析的题目得分率
+  const recentQuestions = await env.DB.prepare(
+    'SELECT id FROM questions WHERE user_id = ? ORDER BY created_at DESC LIMIT ?',
+  )
+    .bind(user.id, questions.length)
+    .all<{ id: string }>();
+
+  const existingIds = (recentQuestions.results || []).map((r) => r.id);
+  const now = new Date().toISOString();
+
+  for (let i = 0; i < questions.length && i < existingIds.length; i++) {
+    const q = questions[i];
+    const questionId = existingIds[i];
+    await env.DB.prepare(
+      'UPDATE questions SET score_rate = ?, answer = ? WHERE id = ? AND user_id = ?',
+    )
+      .bind(
+        Math.round(Number(q.scoreRate) || 0),
+        String(q.answer || q.studentAnswer || q.analysis || '').slice(0, 2000),
+        questionId,
+        user.id,
+      )
+      .run();
+  }
 }
 
 async function buildDefaultAnalysisText(files: File[], textParts: string[], env: Env): Promise<string> {
@@ -871,6 +1130,9 @@ function normalizeQuestions(questions: Question[]): Required<Question>[] {
       text: String(question.text || question.question || question.content || '').trim(),
       answer: String(question.answer || question.analysis || '').trim(),
       analysis: String(question.analysis || question.answer || '').trim(),
+      studentAnswer: String(question.studentAnswer || '').trim(),
+      isCorrect: question.isCorrect === true,
+      feedback: String(question.feedback || '').trim(),
     };
   });
 }
