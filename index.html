@@ -2833,6 +2833,26 @@
       gap: 10px;
     }
 
+    .password-strength {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 2px 0;
+    }
+    .password-strength-bar {
+      height: 4px;
+      flex: 1;
+      border-radius: 2px;
+      background: var(--color-border);
+      transition: width 0.3s, background 0.3s;
+    }
+    .password-strength-text {
+      font-size: 11px;
+      white-space: nowrap;
+      color: var(--color-text-muted);
+      flex-shrink: 0;
+    }
+
     .settings-overlay {
       display: none;
       position: fixed;
@@ -5366,7 +5386,11 @@
       <div class="auth-form">
         <input class="auth-input" id="authNameInput" type="text" placeholder="教师姓名" style="display:none;" />
         <input class="auth-input" id="authEmailInput" type="email" placeholder="邮箱" autocomplete="email" />
-        <input class="auth-input" id="authPasswordInput" type="password" placeholder="密码（至少8位）" autocomplete="current-password" />
+        <input class="auth-input" id="authPasswordInput" type="password" placeholder="密码（至少8位）" autocomplete="current-password" oninput="onPasswordInput(this)" />
+        <div class="password-strength" id="passwordStrength" style="display:none;">
+          <div class="password-strength-bar" id="passwordStrengthBar"></div>
+          <span class="password-strength-text" id="passwordStrengthText"></span>
+        </div>
         <button class="upload-mode-btn primary" onclick="submitAuth()" id="authSubmitBtn">登录</button>
       </div>
     </div>
@@ -10687,6 +10711,35 @@
     $('#authRegisterTab').classList.toggle('active', state.authMode === 'register');
     $('#authNameInput').style.display = state.authMode === 'register' ? 'block' : 'none';
     $('#authSubmitBtn').textContent = state.authMode === 'register' ? '注册并登录' : '登录';
+    $('#passwordStrength').style.display = 'none';
+    $('#authPasswordInput').value = '';
+  }
+
+  function onPasswordInput(input) {
+    var val = input.value;
+    var strengthEl = $('#passwordStrength');
+    var barEl = $('#passwordStrengthBar');
+    var textEl = $('#passwordStrengthText');
+    if (!val) {
+      strengthEl.style.display = 'none';
+      return;
+    }
+    strengthEl.style.display = 'flex';
+    var score = 0;
+    if (val.length >= 8) score += 1;
+    if (val.length >= 12) score += 1;
+    if (/[a-z]/.test(val) && /[A-Z]/.test(val)) score += 1;
+    if (/\d/.test(val)) score += 1;
+    if (/[^a-zA-Z0-9]/.test(val)) score += 1;
+    var pct, color, label;
+    if (score <= 1) { pct = 25; color = '#EF4444'; label = '弱'; }
+    else if (score === 2) { pct = 50; color = '#F59E0B'; label = '中等'; }
+    else if (score === 3) { pct = 75; color = '#3B82F6'; label = '强'; }
+    else { pct = 100; color = '#10B981'; label = '非常强'; }
+    barEl.style.width = pct + '%';
+    barEl.style.background = color;
+    textEl.textContent = label;
+    textEl.style.color = color;
   }
 
   async function submitAuth() {
