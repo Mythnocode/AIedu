@@ -5741,6 +5741,7 @@
     cameraStream: null,         // 摄像头流
     voiceRecognition: null,    // 语音识别实例
     lastScannedPhotos: [],     // 最近扫描的试卷图片（供批改API使用）
+    demoBackup: null,          // 进入演示示例前的本地数据快照
   };
 
 
@@ -10766,12 +10767,23 @@
   /**
    * 手动进入演示示例。只加载本地示例数据，不写入线上账号数据库。
    */
-  function enterDemoMode() {
+  async function enterDemoMode() {
+    if (state.isDemoMode) {
+      await exitDemoMode();
+      return;
+    }
+
     if (state.questions.length > 0 && !state.isDemoMode) {
       var ok = confirm('当前页面已有试卷数据，进入演示示例会临时切换为示例数据。是否继续？');
       if (!ok) return;
     }
 
+    state.demoBackup = {
+      questions: state.questions.map(function(q) { return { ...q, knowledgePoints: [...(q.knowledgePoints || [])] }; }),
+      filteredQuestions: state.filteredQuestions.map(function(q) { return { ...q, knowledgePoints: [...(q.knowledgePoints || [])] }; }),
+      students: DEMO_STUDENTS.map(function(s) { return { ...s, kpData: { ...(s.kpData || {}) } }; }),
+      view: state.currentView,
+    };
     state.isDemoMode = true;
     state.questions = normalizeQuestions(DEMO_QUESTIONS.map(function(q) {
       return { ...q, id: q.id + '-' + Date.now() };
@@ -10788,6 +10800,44 @@
     switchView('search');
     updateSearchViewVisibility();
     showToast('已进入演示示例（30名学生），可体验试卷分析、智能阅卷、学生管理和讲评建议', 'success', 3500);
+  }
+
+  async function exitDemoMode() {
+    state.isDemoMode = false;
+
+    if (state.demoBackup) {
+      state.questions = state.demoBackup.questions || [];
+      state.filteredQuestions = state.demoBackup.filteredQuestions || [];
+      DEMO_STUDENTS = (state.demoBackup.students || []).map(function(s) {
+        return { ...s, kpData: { ...(s.kpData || {}) } };
+      });
+      var restoreView = state.demoBackup.view || 'home';
+      state.demoBackup = null;
+      saveQuestions();
+      updateDemoBanner();
+      updateUI();
+      if (state.currentView === 'students') renderStudentList();
+      switchView(restoreView);
+      updateSearchViewVisibility();
+      showToast('已退出演示模式，已恢复进入前的数据', 'success', 3000);
+      return;
+    }
+
+    state.questions = [];
+    state.filteredQuestions = [];
+    resetStudentsToDemo();
+    if (state.user && state.apiAvailable) {
+      await loadRemoteQuestions();
+      await loadRemoteStudents();
+    } else {
+      saveQuestions();
+      updateUI();
+    }
+    updateDemoBanner();
+    if (state.currentView === 'students') renderStudentList();
+    switchView('home');
+    updateSearchViewVisibility();
+    showToast('已退出演示模式', 'success', 2500);
   }
 
   /**
