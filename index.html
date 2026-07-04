@@ -251,6 +251,19 @@
       text-align: center;
     }
 
+    /* 演示事例按钮 —— 与普通导航按钮区分，突出引导感 */
+    .nav-demo-btn {
+      margin-top: 8px;
+      border: 1px dashed var(--color-primary);
+      background: var(--color-primary-lighter);
+      color: var(--color-primary);
+      font-weight: 600;
+    }
+    .nav-demo-btn:hover {
+      background: var(--color-primary-light);
+      border-style: solid;
+    }
+
     .sidebar-footer {
       padding: 16px 12px;
       border-top: 1px solid var(--color-border-light);
@@ -4523,6 +4536,20 @@
         </span>
         <span class="nav-btn-text">学生管理</span>
       </button>
+      <!-- 演示事例：魔法棒/星标图标 -->
+      <button class="nav-btn nav-demo-btn" onclick="enterDemoMode()">
+        <span class="nav-btn-icon">
+          <svg viewBox="0 0 22 22">
+            <!-- 星标 -->
+            <path d="M5 3 L6 6 L9 7 L6 8 L5 11 L4 8 L1 7 L4 6 Z"/>
+            <!-- 魔法棒 -->
+            <line x1="9" y1="11" x2="19" y2="19"/>
+            <!-- 棒头光点 -->
+            <circle cx="19" cy="19" r="1.8"/>
+          </svg>
+        </span>
+        <span class="nav-btn-text">演示事例</span>
+      </button>
     </nav>
 
     <div class="sidebar-footer">
@@ -5672,12 +5699,68 @@
   ];
 
   const DEMO_SAMPLE_STUDENTS = [
-    { name: '张明', id: 'D001', class: '演示班', avgRate: 86, totalQuestions: 6,
-      kpData: { '勾股定理': 92, '一次函数': 75, '二次函数': 62, '方程求解': 70, '几何证明': 66, '数据分析': 90 } },
-    { name: '李华', id: 'D002', class: '演示班', avgRate: 72, totalQuestions: 6,
-      kpData: { '勾股定理': 80, '一次函数': 68, '二次函数': 48, '方程求解': 60, '几何证明': 55, '数据分析': 82 } },
-    { name: '王芳', id: 'D003', class: '演示班', avgRate: 91, totalQuestions: 6,
-      kpData: { '勾股定理': 96, '一次函数': 88, '二次函数': 84, '方程求解': 90, '几何证明': 86, '数据分析': 94 } }
+    /* ---- 演示一班（15人） ---- */
+    { name: '张明',   id: 'D001', class: '演示一班', avgRate: 86, totalQuestions: 6,
+      kpData: { '勾股定理': 92, '一次函数': 75, '二次函数': 62, '方程求解': 70, '几何证明': 66, '数据分析': 90, '概率统计': 88 } },
+    { name: '李华',   id: 'D002', class: '演示一班', avgRate: 72, totalQuestions: 6,
+      kpData: { '勾股定理': 80, '一次函数': 68, '二次函数': 48, '方程求解': 60, '几何证明': 55, '数据分析': 82, '概率统计': 75 } },
+    { name: '王芳',   id: 'D003', class: '演示一班', avgRate: 91, totalQuestions: 6,
+      kpData: { '勾股定理': 96, '一次函数': 88, '二次函数': 84, '方程求解': 90, '几何证明': 86, '数据分析': 94, '概率统计': 93 } },
+    { name: '陈浩宇', id: 'D004', class: '演示一班', avgRate: 54, totalQuestions: 6,
+      kpData: { '勾股定理': 60, '一次函数': 52, '二次函数': 35, '方程求解': 42, '几何证明': 48, '数据分析': 68, '概率统计': 55 } },
+    { name: '刘思琪', id: 'D005', class: '演示一班', avgRate: 78, totalQuestions: 6,
+      kpData: { '勾股定理': 85, '一次函数': 72, '二次函数': 65, '方程求解': 74, '几何证明': 70, '数据分析': 88, '概率统计': 80 } },
+    { name: '赵子轩', id: 'D006', class: '演示一班', avgRate: 63, totalQuestions: 6,
+      kpData: { '勾股定理': 70, '一次函数': 58, '二次函数': 40, '方程求解': 55, '几何证明': 50, '数据分析': 78, '概率统计': 62 } },
+    { name: '孙雨桐', id: 'D007', class: '演示一班', avgRate: 95, totalQuestions: 6,
+      kpData: { '勾股定理': 98, '一次函数': 94, '二次函数': 92, '方程求解': 96, '几何证明': 90, '数据分析': 97, '概率统计': 98 } },
+    { name: '周梓涵', id: 'D008', class: '演示一班', avgRate: 81, totalQuestions: 6,
+      kpData: { '勾股定理': 88, '一次函数': 76, '二次函数': 70, '方程求解': 78, '几何证明': 74, '数据分析': 90, '概率统计': 85 } },
+    { name: '吴俊杰', id: 'D009', class: '演示一班', avgRate: 48, totalQuestions: 6,
+      kpData: { '勾股定理': 55, '一次函数': 45, '二次函数': 30, '方程求解': 38, '几何证明': 42, '数据分析': 60, '概率统计': 50 } },
+    { name: '郑欣怡', id: 'D010', class: '演示一班', avgRate: 88, totalQuestions: 6,
+      kpData: { '勾股定理': 93, '一次函数': 82, '二次函数': 78, '方程求解': 85, '几何证明': 80, '数据分析': 95, '概率统计': 90 } },
+    { name: '王浩然', id: 'D011', class: '演示一班', avgRate: 69, totalQuestions: 6,
+      kpData: { '勾股定理': 76, '一次函数': 65, '二次函数': 50, '方程求解': 60, '几何证明': 58, '数据分析': 80, '概率统计': 70 } },
+    { name: '冯语彤', id: 'D012', class: '演示一班', avgRate: 93, totalQuestions: 6,
+      kpData: { '勾股定理': 97, '一次函数': 90, '二次函数': 88, '方程求解': 94, '几何证明': 92, '数据分析': 96, '概率统计': 95 } },
+    { name: '陈嘉乐', id: 'D013', class: '演示一班', avgRate: 59, totalQuestions: 6,
+      kpData: { '勾股定理': 66, '一次函数': 55, '二次函数': 38, '方程求解': 48, '几何证明': 52, '数据分析': 72, '概率统计': 60 } },
+    { name: '褚梦瑶', id: 'D014', class: '演示一班', avgRate: 83, totalQuestions: 6,
+      kpData: { '勾股定理': 90, '一次函数': 78, '二次函数': 72, '方程求解': 80, '几何证明': 76, '数据分析': 92, '概率统计': 86 } },
+    { name: '卫子墨', id: 'D015', class: '演示一班', avgRate: 75, totalQuestions: 6,
+      kpData: { '勾股定理': 82, '一次函数': 70, '二次函数': 58, '方程求解': 68, '几何证明': 64, '数据分析': 85, '概率统计': 78 } },
+    /* ---- 演示二班（15人） ---- */
+    { name: '蒋雨泽', id: 'D016', class: '演示二班', avgRate: 90, totalQuestions: 6,
+      kpData: { '勾股定理': 95, '一次函数': 86, '二次函数': 82, '方程求解': 88, '几何证明': 84, '数据分析': 94, '概率统计': 92 } },
+    { name: '沈一诺', id: 'D017', class: '演示二班', avgRate: 66, totalQuestions: 6,
+      kpData: { '勾股定理': 72, '一次函数': 62, '二次函数': 45, '方程求解': 58, '几何证明': 54, '数据分析': 78, '概率统计': 68 } },
+    { name: '韩诗韵', id: 'D018', class: '演示二班', avgRate: 97, totalQuestions: 6,
+      kpData: { '勾股定理': 99, '一次函数': 96, '二次函数': 94, '方程求解': 98, '几何证明': 95, '数据分析': 98, '概率统计': 99 } },
+    { name: '杨铭轩', id: 'D019', class: '演示二班', avgRate: 52, totalQuestions: 6,
+      kpData: { '勾股定理': 58, '一次函数': 50, '二次函数': 32, '方程求解': 40, '几何证明': 46, '数据分析': 65, '概率统计': 53 } },
+    { name: '朱雅静', id: 'D020', class: '演示二班', avgRate: 79, totalQuestions: 6,
+      kpData: { '勾股定理': 86, '一次函数': 74, '二次函数': 66, '方程求解': 76, '几何证明': 72, '数据分析': 88, '概率统计': 82 } },
+    { name: '秦宇豪', id: 'D021', class: '演示二班', avgRate: 61, totalQuestions: 6,
+      kpData: { '勾股定理': 68, '一次函数': 56, '二次函数': 42, '方程求解': 52, '几何证明': 48, '数据分析': 76, '概率统计': 62 } },
+    { name: '尤可欣', id: 'D022', class: '演示二班', avgRate: 87, totalQuestions: 6,
+      kpData: { '勾股定理': 92, '一次函数': 82, '二次函数': 76, '方程求解': 84, '几何证明': 80, '数据分析': 94, '概率统计': 89 } },
+    { name: '许博文', id: 'D023', class: '演示二班', avgRate: 44, totalQuestions: 6,
+      kpData: { '勾股定理': 50, '一次函数': 42, '二次函数': 28, '方程求解': 35, '几何证明': 38, '数据分析': 58, '概率统计': 46 } },
+    { name: '何凌薇', id: 'D024', class: '演示二班', avgRate: 92, totalQuestions: 6,
+      kpData: { '勾股定理': 96, '一次函数': 90, '二次函数': 86, '方程求解': 93, '几何证明': 88, '数据分析': 96, '概率统计': 94 } },
+    { name: '吕志远', id: 'D025', class: '演示二班', avgRate: 71, totalQuestions: 6,
+      kpData: { '勾股定理': 78, '一次函数': 66, '二次函数': 52, '方程求解': 62, '几何证明': 60, '数据分析': 82, '概率统计': 72 } },
+    { name: '施晓彤', id: 'D026', class: '演示二班', avgRate: 84, totalQuestions: 6,
+      kpData: { '勾股定理': 90, '一次函数': 80, '二次函数': 72, '方程求解': 82, '几何证明': 76, '数据分析': 92, '概率统计': 87 } },
+    { name: '张晨阳', id: 'D027', class: '演示二班', avgRate: 57, totalQuestions: 6,
+      kpData: { '勾股定理': 64, '一次函数': 53, '二次函数': 36, '方程求解': 46, '几何证明': 50, '数据分析': 70, '概率统计': 58 } },
+    { name: '孔嘉怡', id: 'D028', class: '演示二班', avgRate: 89, totalQuestions: 6,
+      kpData: { '勾股定理': 94, '一次函数': 85, '二次函数': 80, '方程求解': 87, '几何证明': 84, '数据分析': 95, '概率统计': 91 } },
+    { name: '曹天佑', id: 'D029', class: '演示二班', avgRate: 65, totalQuestions: 6,
+      kpData: { '勾股定理': 72, '一次函数': 60, '二次函数': 44, '方程求解': 56, '几何证明': 52, '数据分析': 78, '概率统计': 66 } },
+    { name: '严惠敏', id: 'D030', class: '演示二班', avgRate: 77, totalQuestions: 6,
+      kpData: { '勾股定理': 84, '一次函数': 72, '二次函数': 64, '方程求解': 72, '几何证明': 68, '数据分析': 86, '概率统计': 80 } }
   ];
 
 
@@ -10745,7 +10828,7 @@
     if (state.currentView === 'students') renderStudentList();
     switchView('search');
     updateSearchViewVisibility();
-    showToast('已进入演示示例，可体验试卷分析、智能阅卷和讲评建议', 'success', 3500);
+    showToast('已进入演示示例（30名学生），可体验试卷分析、智能阅卷、学生管理和讲评建议', 'success', 3500);
   }
 
   /**
