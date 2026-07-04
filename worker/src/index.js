@@ -41,6 +41,10 @@ var index_default = {
         const user = await requireUser(request, env);
         return await handleGradePaper(request, env, corsHeaders, user);
       }
+      if (url.pathname === "/api/essay/grade" && request.method === "POST") {
+        const user = await requireUser(request, env);
+        return await handleEssayGrading(request, env, corsHeaders, user);
+      }
       if (url.pathname === "/api/questions" && request.method === "GET") {
         const user = await requireUser(request, env);
         return await handleListQuestions(env, corsHeaders, user);
@@ -234,6 +238,136 @@ async function handleGradePaper(request, env, corsHeaders, user) {
   await updateQuestionScores(env, user, gradeResult.questions);
   await logUsage(env, user.id, "paper_grade", "gpt-vision+deepseek", `Graded ${gradeResult.questions.length} questions`);
   return json({ result: gradeResult }, 200, corsHeaders);
+}
+async function handleEssayGrading(request, env, corsHeaders, user) {
+  const payload = await request.json().catch(() => null);
+  const title = String(payload?.title || "").trim();
+  const content = String(payload?.content || "").trim();
+  if (content.length < 50) {
+    throw new HttpError(400, "\u4F5C\u6587\u6B63\u6587\u81F3\u5C11\u9700\u898150\u5B57\u3002");
+  }
+  if (content.length > 1e4) {
+    throw new HttpError(400, "\u4F5C\u6587\u6B63\u6587\u8FC7\u957F\uFF0C\u8BF7\u63A7\u5236\u572810000\u5B57\u4EE5\u5185\u3002");
+  }
+  assertDeepSeekConfigured(env);
+  const result = await gradeEssayWithDeepSeek(title, content, env);
+  await logUsage(env, user.id, "essay_grade", "deepseek", JSON.stringify({ title: title.slice(0, 60), wordCount: content.length, totalScore: result.totalScore }));
+  return json({ result }, 200, corsHeaders);
+}
+async function gradeEssayWithDeepSeek(title, content, env) {
+  const prompt = [
+    "\u4F60\u662F\u4E00\u4F4D\u7ECF\u9A8C\u4E30\u5BCC\u3001\u4E25\u8C28\u8D1F\u8D23\u7684\u8BED\u6587\u6559\u5E08\uFF0C\u6B63\u5728\u6279\u6539\u5B66\u751F\u7684\u4F5C\u6587\u3002",
+    "\u8BF7\u4ED4\u7EC6\u9605\u8BFB\u5B66\u751F\u7684\u4F5C\u6587\u5168\u6587\uFF0C\u57FA\u4E8E\u5B9E\u9645\u5185\u5BB9\u8D28\u91CF\u8FDB\u884C\u5BA2\u89C2\u3001\u516C\u6B63\u7684\u8BC4\u5206\u3002",
+    "\u8BC4\u5206\u5FC5\u987B\u4E25\u683C\u4F9D\u636E\u4F5C\u6587\u7684\u771F\u5B9E\u6C34\u5E73\uFF0C\u4E0D\u8981\u523B\u610F\u7ED9\u9AD8\u5206\u6216\u4F4E\u5206\u3002",
+    "",
+    "\u8BC4\u5206\u7EF4\u5EA6\u548C\u5206\u503C\uFF1A",
+    "1. \u5185\u5BB9\u7ACB\u610F\uFF08\u6EE1\u520630\u5206\uFF09\uFF1A\u8BC4\u4F30\u4E3B\u9898\u662F\u5426\u660E\u786E\u3001\u7ACB\u610F\u662F\u5426\u6DF1\u523B\u3001\u5185\u5BB9\u662F\u5426\u5145\u5B9E\u3001\u662F\u5426\u6709\u5177\u4F53\u4E8B\u4F8B\u548C\u771F\u60C5\u5B9E\u611F",
+    "2. \u7ED3\u6784\u5E03\u5C40\uFF08\u6EE1\u520620\u5206\uFF09\uFF1A\u8BC4\u4F30\u6587\u7AE0\u7ED3\u6784\u662F\u5426\u5B8C\u6574\u3001\u5C42\u6B21\u662F\u5426\u6E05\u6670\u3001\u5F00\u5934\u7ED3\u5C3E\u662F\u5426\u547C\u5E94\u3001\u6BB5\u843D\u5B89\u6392\u662F\u5426\u5408\u7406\u3001\u8FC7\u6E21\u662F\u5426\u81EA\u7136",
+    "3. \u8BED\u8A00\u8868\u8FBE\uFF08\u6EE1\u520630\u5206\uFF09\uFF1A\u8BC4\u4F30\u8BED\u8A00\u662F\u5426\u901A\u987A\u6D41\u7545\u3001\u7528\u8BCD\u662F\u5426\u51C6\u786E\u4E30\u5BCC\u3001\u662F\u5426\u6070\u5F53\u8FD0\u7528\u4FEE\u8F9E\u624B\u6CD5\u3001\u53E5\u5F0F\u662F\u5426\u591A\u6837\u3001\u6807\u70B9\u4F7F\u7528\u662F\u5426\u89C4\u8303",
+    "4. \u521B\u65B0\u4EAE\u70B9\uFF08\u6EE1\u520620\u5206\uFF09\uFF1A\u8BC4\u4F30\u662F\u5426\u6709\u72EC\u7279\u89C6\u89D2\u3001\u662F\u5426\u6709\u751F\u52A8\u7684\u7EC6\u8282\u63CF\u5199\u3001\u662F\u5426\u6709\u521B\u610F\u548C\u60F3\u8C61\u529B\u3001\u662F\u5426\u6709\u4E2A\u6027\u5316\u8868\u8FBE",
+    "",
+    "\u8BC4\u5206\u6807\u51C6\uFF1A",
+    "- \u5185\u5BB9\u7A7A\u6D1E\u3001\u4E3B\u9898\u4E0D\u6E05\u3001\u504F\u79BB\u9898\u610F\u7684\u4F5C\u6587\u5FC5\u987B\u4F4E\u5206\uFF08\u603B\u520640\u5206\u4EE5\u4E0B\uFF09",
+    "- \u5185\u5BB9\u5145\u5B9E\u3001\u4E3B\u9898\u660E\u786E\u3001\u7ED3\u6784\u5408\u7406\u7684\u4F5C\u6587\u7ED9\u4E2D\u7B49\u5206\u6570\uFF0860-75\u5206\uFF09",
+    "- \u53EA\u6709\u4E3B\u9898\u6DF1\u523B\u3001\u5185\u5BB9\u4E30\u5BCC\u3001\u8BED\u8A00\u4F18\u7F8E\u3001\u6709\u4EAE\u70B9\u7684\u4F18\u79C0\u4F5C\u6587\u624D\u80FD\u7ED9\u9AD8\u5206\uFF0880\u5206\u4EE5\u4E0A\uFF09",
+    "- \u5982\u679C\u4F5C\u6587\u5185\u5BB9\u6BEB\u65E0\u903B\u8F91\u3001\u80E1\u4E71\u51D1\u5B57\u6570\u3001\u4E0E\u6807\u9898\u5B8C\u5168\u65E0\u5173\uFF0C\u603B\u5206\u5E94\u572830\u5206\u4EE5\u4E0B",
+    "- \u5982\u679C\u4F5C\u6587\u5185\u5BB9\u57FA\u672C\u901A\u987A\u4F46\u5E73\u6DE1\u65E0\u5947\uFF0C\u603B\u5206\u5E94\u572850-65\u5206\u4E4B\u95F4",
+    "",
+    "\u8BF7\u4E25\u683C\u8F93\u51FA JSON \u5BF9\u8C61\uFF0C\u4E0D\u8981\u8F93\u51FA Markdown \u683C\u5F0F\u3002JSON \u5B57\u6BB5\u5982\u4E0B\uFF1A",
+    "{",
+    '  "totalScore": \u6570\u5B57(\u603B\u52060-100),',
+    '  "dimensions": [',
+    '    {"name":"\u5185\u5BB9\u7ACB\u610F","max":30,"score":\u6570\u5B57,"feedback":"\u8BE5\u7EF4\u5EA6\u7684\u5177\u4F53\u8BC4\u4EF7\uFF08\u5FC5\u987B\u5F15\u7528\u4F5C\u6587\u4E2D\u7684\u5B9E\u9645\u5185\u5BB9\u6765\u4F50\u8BC1\uFF09"},',
+    '    {"name":"\u7ED3\u6784\u5E03\u5C40","max":20,"score":\u6570\u5B57,"feedback":"\u8BE5\u7EF4\u5EA6\u7684\u5177\u4F53\u8BC4\u4EF7"},',
+    '    {"name":"\u8BED\u8A00\u8868\u8FBE","max":30,"score":\u6570\u5B57,"feedback":"\u8BE5\u7EF4\u5EA6\u7684\u5177\u4F53\u8BC4\u4EF7"},',
+    '    {"name":"\u521B\u65B0\u4EAE\u70B9","max":20,"score":\u6570\u5B57,"feedback":"\u8BE5\u7EF4\u5EA6\u7684\u5177\u4F53\u8BC4\u4EF7"}',
+    "  ],",
+    '  "comment": "\u603B\u4F53\u8BC4\u8BED\uFF08100-200\u5B57\uFF0C\u5FC5\u987B\u5177\u4F53\u6307\u51FA\u4F5C\u6587\u7684\u4F18\u70B9\u548C\u4E0D\u8DB3\uFF0C\u5F15\u7528\u5B9E\u9645\u5185\u5BB9\uFF09",',
+    '  "strengths": ["\u4F18\u70B91","\u4F18\u70B92","\u4F18\u70B93"],',
+    '  "weaknesses": ["\u4E0D\u8DB31","\u4E0D\u8DB32","\u4E0D\u8DB33"],',
+    '  "suggestions": ["\u6539\u8FDB\u5EFA\u8BAE1","\u6539\u8FDB\u5EFA\u8BAE2","\u6539\u8FDB\u5EFA\u8BAE3"]',
+    "}",
+    "",
+    "\u91CD\u8981\u63D0\u793A\uFF1A",
+    "1. \u5FC5\u987B\u8BA4\u771F\u9605\u8BFB\u4F5C\u6587\u5168\u6587\u540E\u518D\u8BC4\u5206\uFF0C\u4E0D\u8981\u4EC5\u51ED\u5B57\u6570\u6216\u5173\u952E\u8BCD\u7ED9\u5206",
+    "2. \u8BC4\u4EF7\u5FC5\u987B\u5177\u4F53\uFF0C\u8981\u5F15\u7528\u4F5C\u6587\u4E2D\u7684\u5B9E\u9645\u53E5\u5B50\u6216\u5185\u5BB9\u6765\u4F50\u8BC1\u4F60\u7684\u8BC4\u4EF7",
+    "3. \u5982\u679C\u4F5C\u6587\u5185\u5BB9\u8D28\u91CF\u5DEE\uFF08\u5982\u80E1\u4E71\u51D1\u5B57\u3001\u5185\u5BB9\u7A7A\u6D1E\u3001\u4E3B\u9898\u4E0D\u6E05\uFF09\uFF0C\u5FC5\u987B\u7ED9\u4F4E\u5206",
+    "4. dimensions\u6570\u7EC4\u4E2D4\u4E2A\u7EF4\u5EA6\u7684score\u4E4B\u548C\u5FC5\u987B\u7B49\u4E8EtotalScore",
+    "5. strengths/weaknesses/suggestions\u5404\u81F3\u5C112\u6761\uFF0C\u6700\u591A5\u6761",
+    "",
+    "\u4F5C\u6587\u6807\u9898\uFF1A" + (title || "\uFF08\u65E0\u6807\u9898\uFF09"),
+    "",
+    "\u4F5C\u6587\u6B63\u6587\uFF1A",
+    content
+  ].join("\n");
+  const response = await fetch("https://api.deepseek.com/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.DEEPSEEK_API_KEY}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model: env.DEEPSEEK_MODEL || "deepseek-chat",
+      temperature: 0.3,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content: "\u4F60\u662F\u4E00\u4F4D\u4E25\u8C28\u7684\u8BED\u6587\u6559\u5E08\uFF0C\u53EA\u8F93\u51FA\u7B26\u5408\u8981\u6C42\u7684 JSON \u5BF9\u8C61\u3002\u4F60\u5FC5\u987B\u57FA\u4E8E\u4F5C\u6587\u7684\u5B9E\u9645\u5185\u5BB9\u8FDB\u884C\u8BC4\u4EF7\uFF0C\u7EDD\u4E0D\u6577\u884D\u7ED9\u5206\u3002"
+        },
+        { role: "user", content: prompt }
+      ]
+    })
+  });
+  const respPayload = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(`\u4F5C\u6587\u6279\u6539\u670D\u52A1\u8C03\u7528\u5931\u8D25\uFF1A${respPayload?.error?.message || response.statusText}`);
+  }
+  const respContent = respPayload?.choices?.[0]?.message?.content;
+  if (!respContent) {
+    throw new Error("\u4F5C\u6587\u6279\u6539\u670D\u52A1\u672A\u8FD4\u56DE\u6709\u6548\u7ED3\u679C\u3002");
+  }
+  return normalizeEssayResult(parseJsonObject(respContent), content, title);
+}
+function normalizeEssayResult(value, content, title) {
+  const dimNames = [
+    { name: "\u5185\u5BB9\u7ACB\u610F", max: 30 },
+    { name: "\u7ED3\u6784\u5E03\u5C40", max: 20 },
+    { name: "\u8BED\u8A00\u8868\u8FBE", max: 30 },
+    { name: "\u521B\u65B0\u4EAE\u70B9", max: 20 }
+  ];
+  const rawDims = Array.isArray(value.dimensions) ? value.dimensions : [];
+  const dimensions = dimNames.map((dim, i) => {
+    const raw = rawDims[i] || {};
+    let score = Math.round(Number(raw.score ?? 0));
+    if (isNaN(score) || score < 0) score = 0;
+    if (score > dim.max) score = dim.max;
+    return {
+      name: dim.name,
+      max: dim.max,
+      score,
+      feedback: String(raw.feedback || "").trim() || "\u8BE5\u7EF4\u5EA6\u6682\u65E0\u5177\u4F53\u8BC4\u4EF7\u3002"
+    };
+  });
+  let totalScore = dimensions.reduce((sum, d) => sum + d.score, 0);
+  if (totalScore > 100) totalScore = 100;
+  if (totalScore < 0) totalScore = 0;
+  const grade = totalScore >= 90 ? "A \xB7 \u4F18\u79C0" : totalScore >= 80 ? "B \xB7 \u826F\u597D" : totalScore >= 70 ? "C \xB7 \u4E2D\u7B49" : totalScore >= 60 ? "D \xB7 \u53CA\u683C" : "E \xB7 \u4E0D\u53CA\u683C";
+  const comment = String(value.comment || "").trim() || `\u672C\u6587\uFF08${title ? "\u300A" + title + "\u300B" : "\u65E0\u6807\u9898"}\uFF09\u5171${content.length}\u5B57\uFF0C\u603B\u5206${totalScore}\u5206\u3002\u8BF7\u53C2\u8003\u5404\u7EF4\u5EA6\u8BC4\u4EF7\u8FDB\u884C\u6539\u8FDB\u3002`;
+  const toStringArray = (arr, fallback) => {
+    if (!Array.isArray(arr)) return fallback;
+    const result = arr.map((item) => String(item || "").trim()).filter(Boolean).slice(0, 5);
+    return result.length >= 2 ? result : fallback;
+  };
+  return {
+    totalScore,
+    grade,
+    dimensions,
+    comment,
+    strengths: toStringArray(value.strengths, ["\u6682\u65E0\u660E\u663E\u4F18\u70B9"]),
+    weaknesses: toStringArray(value.weaknesses, ["\u6682\u65E0\u5177\u4F53\u4E0D\u8DB3"]),
+    suggestions: toStringArray(value.suggestions, ["\u5EFA\u8BAE\u591A\u8BFB\u591A\u5199\uFF0C\u6301\u7EED\u63D0\u5347\u5199\u4F5C\u6C34\u5E73"])
+  };
 }
 async function extractPaperContentWithVision(files, env) {
   const parts = [];

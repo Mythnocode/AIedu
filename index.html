@@ -6017,55 +6017,122 @@
     btn.disabled = true;
     btn.textContent = 'AI批改中...';
 
-    // 深入分析作文内容
-    setTimeout(function() {
-      var analysis = analyzeEssayContent(content, title);
-
-      var dims = [
-        { name: '内容立意', max: 30, score: analysis.contentScore, feedback: analysis.contentFeedback, color: '#2563EB' },
-        { name: '结构布局', max: 20, score: analysis.structScore, feedback: analysis.structFeedback, color: '#8B5CF6' },
-        { name: '语言表达', max: 30, score: analysis.langScore, feedback: analysis.langFeedback, color: '#10B981' },
-        { name: '创新亮点', max: 20, score: analysis.innovScore, feedback: analysis.innovFeedback, color: '#F59E0B' }
-      ];
-
-      var totalScore = analysis.contentScore + analysis.structScore + analysis.langScore + analysis.innovScore;
-      var grade = totalScore >= 90 ? 'A \u00b7 优秀' : (totalScore >= 80 ? 'B \u00b7 良好' : (totalScore >= 70 ? 'C \u00b7 中等' : (totalScore >= 60 ? 'D \u00b7 及格' : 'E \u00b7 不及格')));
-
-      var dimsHtml = '';
-      dims.forEach(function(d) {
-        var pct = Math.round(d.score / d.max * 100);
-        dimsHtml += '<div class="essay-dimension">';
-        dimsHtml += '<div class="essay-dimension-header">';
-        dimsHtml += '<span class="essay-dimension-name">' + d.name + '</span>';
-        dimsHtml += '<span class="essay-dimension-score" style="color:' + d.color + ';">' + d.score + '/' + d.max + '</span>';
-        dimsHtml += '</div>';
-        dimsHtml += '<div class="essay-dimension-bar"><div class="essay-dimension-bar-fill" style="width:' + pct + '%;background:' + d.color + ';"></div></div>';
-        dimsHtml += '<div class="essay-dimension-feedback">' + d.feedback + '</div>';
-        dimsHtml += '</div>';
-      });
-
-      $('#essayDimensions').innerHTML = dimsHtml;
-      $('#essayComment').textContent = analysis.comment;
-
-      // 数字递增动画
-      var currentScore = 0;
-      var scoreEl = $('#essayTotalScore');
-      var gradeEl = $('#essayGrade');
-      var interval = setInterval(function() {
-        currentScore += 2;
-        if (currentScore >= totalScore) {
-          currentScore = totalScore;
-          clearInterval(interval);
-          gradeEl.textContent = grade;
-        }
-        scoreEl.textContent = currentScore;
-      }, 30);
-
-      $('#essayResult').classList.add('show');
+    if (!state.apiAvailable) {
+      showToast('后端服务未连接，无法进行AI批改', 'error', 5000);
       btn.disabled = false;
-      btn.textContent = '重新批改';
-      showToast('作文批改完成，总分 ' + totalScore + ' 分', 'success');
-    }, 1500);
+      btn.textContent = 'AI智能批改';
+      return;
+    }
+    if (!state.user) {
+      openAuthModal('login');
+      btn.disabled = false;
+      btn.textContent = 'AI智能批改';
+      return;
+    }
+
+    // 调用后端API进行真实AI作文批改
+    runEssayGradingAPI(title, content).then(function(result) {
+      renderEssayResult(result, btn);
+    }).catch(function(err) {
+      console.error('作文批改失败:', err);
+      showToast('作文批改失败：' + (err.message || '请稍后重试'), 'error', 5000);
+      btn.disabled = false;
+      btn.textContent = 'AI智能批改';
+    });
+  }
+
+  /**
+   * 调用后端 /api/essay/grade API 进行真实AI作文批改
+   */
+  async function runEssayGradingAPI(title, content) {
+    var data = await apiFetch('/api/essay/grade', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: title, content: content }),
+    });
+
+    if (!data || !data.result) {
+      throw new Error('批改服务返回数据异常');
+    }
+
+    return data.result;
+  }
+
+  /**
+   * 渲染作文批改结果
+   */
+  function renderEssayResult(result, btn) {
+    var dims = result.dimensions || [];
+    var totalScore = result.totalScore || 0;
+    var grade = result.grade || '—';
+
+    var colors = ['#2563EB', '#8B5CF6', '#10B981', '#F59E0B'];
+
+    var dimsHtml = '';
+    dims.forEach(function(d, i) {
+      var pct = Math.round(d.score / d.max * 100);
+      var color = colors[i] || '#2563EB';
+      dimsHtml += '<div class="essay-dimension">';
+      dimsHtml += '<div class="essay-dimension-header">';
+      dimsHtml += '<span class="essay-dimension-name">' + (d.name || '') + '</span>';
+      dimsHtml += '<span class="essay-dimension-score" style="color:' + color + ';">' + d.score + '/' + d.max + '</span>';
+      dimsHtml += '</div>';
+      dimsHtml += '<div class="essay-dimension-bar"><div class="essay-dimension-bar-fill" style="width:' + pct + '%;background:' + color + ';"></div></div>';
+      dimsHtml += '<div class="essay-dimension-feedback">' + (d.feedback || '') + '</div>';
+      dimsHtml += '</div>';
+    });
+
+    // 优缺点和建议
+    var analysisHtml = '';
+    if (result.strengths && result.strengths.length > 0) {
+      analysisHtml += '<div style="margin-top:16px;padding:12px 16px;background:rgba(16,185,129,0.08);border-radius:10px;border-left:3px solid #10B981;">';
+      analysisHtml += '<div style="font-size:13px;font-weight:600;color:#10B981;margin-bottom:6px;">✓ 优点</div>';
+      analysisHtml += '<ul style="margin:0;padding-left:18px;font-size:13px;color:var(--color-text);line-height:1.8;">';
+      result.strengths.forEach(function(s) {
+        analysisHtml += '<li>' + s + '</li>';
+      });
+      analysisHtml += '</ul></div>';
+    }
+    if (result.weaknesses && result.weaknesses.length > 0) {
+      analysisHtml += '<div style="margin-top:10px;padding:12px 16px;background:rgba(239,68,68,0.08);border-radius:10px;border-left:3px solid #EF4444;">';
+      analysisHtml += '<div style="font-size:13px;font-weight:600;color:#EF4444;margin-bottom:6px;">✗ 不足</div>';
+      analysisHtml += '<ul style="margin:0;padding-left:18px;font-size:13px;color:var(--color-text);line-height:1.8;">';
+      result.weaknesses.forEach(function(w) {
+        analysisHtml += '<li>' + w + '</li>';
+      });
+      analysisHtml += '</ul></div>';
+    }
+    if (result.suggestions && result.suggestions.length > 0) {
+      analysisHtml += '<div style="margin-top:10px;padding:12px 16px;background:rgba(37,99,235,0.08);border-radius:10px;border-left:3px solid #2563EB;">';
+      analysisHtml += '<div style="font-size:13px;font-weight:600;color:#2563EB;margin-bottom:6px;">→ 改进建议</div>';
+      analysisHtml += '<ul style="margin:0;padding-left:18px;font-size:13px;color:var(--color-text);line-height:1.8;">';
+      result.suggestions.forEach(function(s) {
+        analysisHtml += '<li>' + s + '</li>';
+      });
+      analysisHtml += '</ul></div>';
+    }
+
+    $('#essayDimensions').innerHTML = dimsHtml + analysisHtml;
+    $('#essayComment').textContent = result.comment || '';
+
+    // 数字递增动画
+    var currentScore = 0;
+    var scoreEl = $('#essayTotalScore');
+    var gradeEl = $('#essayGrade');
+    var interval = setInterval(function() {
+      currentScore += 2;
+      if (currentScore >= totalScore) {
+        currentScore = totalScore;
+        clearInterval(interval);
+        gradeEl.textContent = grade;
+      }
+      scoreEl.textContent = currentScore;
+    }, 30);
+
+    $('#essayResult').classList.add('show');
+    btn.disabled = false;
+    btn.textContent = '重新批改';
+    showToast('作文批改完成，总分 ' + totalScore + ' 分', 'success');
   }
 
   /**

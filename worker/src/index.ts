@@ -125,6 +125,11 @@ export default {
         return await handleGradePaper(request, env, corsHeaders, user);
       }
 
+      if (url.pathname === '/api/essay/grade' && request.method === 'POST') {
+        const user = await requireUser(request, env);
+        return await handleEssayGrading(request, env, corsHeaders, user);
+      }
+
       if (url.pathname === '/api/questions' && request.method === 'GET') {
         const user = await requireUser(request, env);
         return await handleListQuestions(env, corsHeaders, user);
@@ -413,6 +418,218 @@ async function handleGradePaper(
   await logUsage(env, user.id, 'paper_grade', 'gpt-vision+deepseek', `Graded ${gradeResult.questions.length} questions`);
 
   return json({ result: gradeResult }, 200, corsHeaders);
+}
+
+/**
+ * 作文批改：调用大模型 DeepSeek 对作文内容进行深度分析批改。
+ * 从内容立意、结构布局、语言表达、创新亮点四个维度评分，
+ * 给出基于实际内容的真实评价，杜绝"随便写就有分"的问题。
+ */
+async function handleEssayGrading(
+  request: Request,
+  env: Env,
+  corsHeaders: HeadersInit,
+  user: AuthUser,
+): Promise<Response> {
+  const payload = (await request.json().catch(() => null)) as {
+    title?: string;
+    content?: string;
+  } | null;
+
+  const title = String(payload?.title || '').trim();
+  const content = String(payload?.content || '').trim();
+
+  if (content.length < 50) {
+    throw new HttpError(400, '作文正文至少需要50字。');
+  }
+
+  if (content.length > 10000) {
+    throw new HttpError(400, '作文正文过长，请控制在10000字以内。');
+  }
+
+  assertDeepSeekConfigured(env);
+
+  const result = await gradeEssayWithDeepSeek(title, content, env);
+
+  await logUsage(env, user.id, 'essay_grade', 'deepseek', JSON.stringify({ title: title.slice(0, 60), wordCount: content.length, totalScore: result.totalScore }));
+
+  return json({ result }, 200, corsHeaders);
+}
+
+/**
+ * 调用 DeepSeek 大模型对作文进行真实的深度批改
+ */
+async function gradeEssayWithDeepSeek(
+  title: string,
+  content: string,
+  env: Env,
+): Promise<{
+  totalScore: number;
+  grade: string;
+  dimensions: Array<{
+    name: string;
+    max: number;
+    score: number;
+    feedback: string;
+  }>;
+  comment: string;
+  strengths: string[];
+  weaknesses: string[];
+  suggestions: string[];
+}> {
+  const prompt = [
+    '你是一位经验丰富、严谨负责的语文教师，正在批改学生的作文。',
+    '请仔细阅读学生的作文全文，基于实际内容质量进行客观、公正的评分。',
+    '评分必须严格依据作文的真实水平，不要刻意给高分或低分。',
+    '',
+    '评分维度和分值：',
+    '1. 内容立意（满分30分）：评估主题是否明确、立意是否深刻、内容是否充实、是否有具体事例和真情实感',
+    '2. 结构布局（满分20分）：评估文章结构是否完整、层次是否清晰、开头结尾是否呼应、段落安排是否合理、过渡是否自然',
+    '3. 语言表达（满分30分）：评估语言是否通顺流畅、用词是否准确丰富、是否恰当运用修辞手法、句式是否多样、标点使用是否规范',
+    '4. 创新亮点（满分20分）：评估是否有独特视角、是否有生动的细节描写、是否有创意和想象力、是否有个性化表达',
+    '',
+    '评分标准：',
+    '- 内容空洞、主题不清、偏离题意的作文必须低分（总分40分以下）',
+    '- 内容充实、主题明确、结构合理的作文给中等分数（60-75分）',
+    '- 只有主题深刻、内容丰富、语言优美、有亮点的优秀作文才能给高分（80分以上）',
+    '- 如果作文内容毫无逻辑、胡乱凑字数、与标题完全无关，总分应在30分以下',
+    '- 如果作文内容基本通顺但平淡无奇，总分应在50-65分之间',
+    '',
+    '请严格输出 JSON 对象，不要输出 Markdown 格式。JSON 字段如下：',
+    '{',
+    '  "totalScore": 数字(总分0-100),',
+    '  "dimensions": [',
+    '    {"name":"内容立意","max":30,"score":数字,"feedback":"该维度的具体评价（必须引用作文中的实际内容来佐证）"},',
+    '    {"name":"结构布局","max":20,"score":数字,"feedback":"该维度的具体评价"},',
+    '    {"name":"语言表达","max":30,"score":数字,"feedback":"该维度的具体评价"},',
+    '    {"name":"创新亮点","max":20,"score":数字,"feedback":"该维度的具体评价"}',
+    '  ],',
+    '  "comment": "总体评语（100-200字，必须具体指出作文的优点和不足，引用实际内容）",',
+    '  "strengths": ["优点1","优点2","优点3"],',
+    '  "weaknesses": ["不足1","不足2","不足3"],',
+    '  "suggestions": ["改进建议1","改进建议2","改进建议3"]',
+    '}',
+    '',
+    '重要提示：',
+    '1. 必须认真阅读作文全文后再评分，不要仅凭字数或关键词给分',
+    '2. 评价必须具体，要引用作文中的实际句子或内容来佐证你的评价',
+    '3. 如果作文内容质量差（如胡乱凑字、内容空洞、主题不清），必须给低分',
+    '4. dimensions数组中4个维度的score之和必须等于totalScore',
+    '5. strengths/weaknesses/suggestions各至少2条，最多5条',
+    '',
+    '作文标题：' + (title || '（无标题）'),
+    '',
+    '作文正文：',
+    content,
+  ].join('\n');
+
+  const response = await fetch('https://api.deepseek.com/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${env.DEEPSEEK_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: env.DEEPSEEK_MODEL || 'deepseek-chat',
+      temperature: 0.3,
+      response_format: { type: 'json_object' },
+      messages: [
+        {
+          role: 'system',
+          content: '你是一位严谨的语文教师，只输出符合要求的 JSON 对象。你必须基于作文的实际内容进行评价，绝不敷衍给分。',
+        },
+        { role: 'user', content: prompt },
+      ],
+    }),
+  });
+
+  const respPayload = (await response.json().catch(() => null)) as {
+    choices?: Array<{ message?: { content?: string } }>;
+    error?: { message?: string };
+  } | null;
+
+  if (!response.ok) {
+    throw new Error(`作文批改服务调用失败：${respPayload?.error?.message || response.statusText}`);
+  }
+
+  const respContent = respPayload?.choices?.[0]?.message?.content;
+  if (!respContent) {
+    throw new Error('作文批改服务未返回有效结果。');
+  }
+
+  return normalizeEssayResult(parseJsonObject(respContent), content, title);
+}
+
+/**
+ * 规范化作文批改结果，确保数值合法
+ */
+function normalizeEssayResult(
+  value: Record<string, unknown>,
+  content: string,
+  title: string,
+): {
+  totalScore: number;
+  grade: string;
+  dimensions: Array<{ name: string; max: number; score: number; feedback: string }>;
+  comment: string;
+  strengths: string[];
+  weaknesses: string[];
+  suggestions: string[];
+} {
+  const dimNames = [
+    { name: '内容立意', max: 30 },
+    { name: '结构布局', max: 20 },
+    { name: '语言表达', max: 30 },
+    { name: '创新亮点', max: 20 },
+  ];
+
+  const rawDims = Array.isArray(value.dimensions) ? value.dimensions : [];
+  const dimensions = dimNames.map((dim, i) => {
+    const raw = (rawDims[i] || {}) as Record<string, unknown>;
+    let score = Math.round(Number(raw.score ?? 0));
+    if (isNaN(score) || score < 0) score = 0;
+    if (score > dim.max) score = dim.max;
+    return {
+      name: dim.name,
+      max: dim.max,
+      score,
+      feedback: String(raw.feedback || '').trim() || '该维度暂无具体评价。',
+    };
+  });
+
+  // 总分 = 四个维度分数之和（确保一致）
+  let totalScore = dimensions.reduce((sum, d) => sum + d.score, 0);
+  if (totalScore > 100) totalScore = 100;
+  if (totalScore < 0) totalScore = 0;
+
+  const grade =
+    totalScore >= 90 ? 'A · 优秀' :
+    totalScore >= 80 ? 'B · 良好' :
+    totalScore >= 70 ? 'C · 中等' :
+    totalScore >= 60 ? 'D · 及格' :
+    'E · 不及格';
+
+  const comment = String(value.comment || '').trim() ||
+    `本文（${title ? '《' + title + '》' : '无标题'}）共${content.length}字，总分${totalScore}分。请参考各维度评价进行改进。`;
+
+  const toStringArray = (arr: unknown, fallback: string[]): string[] => {
+    if (!Array.isArray(arr)) return fallback;
+    const result = arr
+      .map((item) => String(item || '').trim())
+      .filter(Boolean)
+      .slice(0, 5);
+    return result.length >= 2 ? result : fallback;
+  };
+
+  return {
+    totalScore,
+    grade,
+    dimensions,
+    comment,
+    strengths: toStringArray(value.strengths, ['暂无明显优点']),
+    weaknesses: toStringArray(value.weaknesses, ['暂无具体不足']),
+    suggestions: toStringArray(value.suggestions, ['建议多读多写，持续提升写作水平']),
+  };
 }
 
 /**
@@ -1081,13 +1298,13 @@ async function analyzeWithDeepSeek(ocrText: string, env: Env): Promise<AnalysisR
   return normalizeAnalysis(parseJsonObject(content));
 }
 
-function parseJsonObject(content: string): Partial<AnalysisResult> {
+function parseJsonObject<T = Record<string, unknown>>(content: string): T {
   try {
-    return JSON.parse(content) as Partial<AnalysisResult>;
+    return JSON.parse(content) as T;
   } catch {
     const match = content.match(/\{[\s\S]*\}/);
     if (!match) throw new Error('模型返回内容不是有效 JSON。');
-    return JSON.parse(match[0]) as Partial<AnalysisResult>;
+    return JSON.parse(match[0]) as T;
   }
 }
 
