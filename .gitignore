@@ -3,3 +3,16 @@ node_modules/
 worker/.wrangler/
 worker/.dev.vars
 *.log
+
+# WorkBuddy workspace data
+.workbuddy/
+
+# Local backups and temporary files
+*.local-backup
+share-data*.json
+share-bundle.js
+share-index.js
+shared_page.html
+main-index.js
+services.js
+chat-ui.css
