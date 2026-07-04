@@ -10715,6 +10715,16 @@
     $('#authPasswordInput').value = '';
   }
 
+  function getPasswordScore(val) {
+    var score = 0;
+    if (val.length >= 8) score += 1;
+    if (val.length >= 12) score += 1;
+    if (/[a-z]/.test(val) && /[A-Z]/.test(val)) score += 1;
+    if (/\d/.test(val)) score += 1;
+    if (/[^a-zA-Z0-9]/.test(val)) score += 1;
+    return score;
+  }
+
   function onPasswordInput(input) {
     var val = input.value;
     var strengthEl = $('#passwordStrength');
@@ -10725,12 +10735,7 @@
       return;
     }
     strengthEl.style.display = 'flex';
-    var score = 0;
-    if (val.length >= 8) score += 1;
-    if (val.length >= 12) score += 1;
-    if (/[a-z]/.test(val) && /[A-Z]/.test(val)) score += 1;
-    if (/\d/.test(val)) score += 1;
-    if (/[^a-zA-Z0-9]/.test(val)) score += 1;
+    var score = getPasswordScore(val);
     var pct, color, label;
     if (score <= 1) { pct = 25; color = '#EF4444'; label = '弱'; }
     else if (score === 2) { pct = 50; color = '#F59E0B'; label = '中等'; }
@@ -10751,6 +10756,18 @@
     const password = $('#authPasswordInput').value;
     const name = $('#authNameInput').value.trim();
     const path = state.authMode === 'register' ? '/api/auth/register' : '/api/auth/login';
+
+    if (state.authMode === 'register') {
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showToast('请输入有效的邮箱地址', 'error', 3000);
+        $('#authEmailInput').focus();
+        return;
+      }
+      if (getPasswordScore(password) < 2) {
+        showToast('密码强度至少需要"中等"（≥8位，包含数字和大小写字母）', 'error', 4000);
+        return;
+      }
+    }
 
     try {
       const data = await apiFetch(path, {
