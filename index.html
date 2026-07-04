@@ -2391,6 +2391,37 @@
     .scan-feature-icon--indigo svg {
       stroke: #4F46E5;
     }
+    .scan-feature-card--demo {
+      background: linear-gradient(135deg, #EF4444 0%, #F97316 100%);
+      border-color: rgba(249, 115, 22, 0.4);
+      color: #fff;
+      width: 108px;
+      min-height: 108px;
+      padding: 16px 12px;
+      justify-content: center;
+      justify-self: start;
+    }
+    .scan-feature-card--demo:hover {
+      border-color: rgba(249, 115, 22, 0.7);
+      box-shadow: 0 14px 34px rgba(249, 115, 22, 0.24);
+    }
+    .scan-feature-card--demo .scan-feature-icon {
+      width: 42px;
+      height: 42px;
+      margin-bottom: 10px;
+      background: transparent;
+    }
+    .scan-feature-card--demo .scan-feature-icon svg {
+      width: 34px;
+      height: 34px;
+      stroke: #fff;
+      stroke-width: 2.2;
+    }
+    .scan-feature-card--demo .scan-feature-name {
+      color: #fff;
+      font-size: 17px;
+      margin-bottom: 0;
+    }
     .scan-feature-name {
       font-size: 16px;
       font-weight: 600;
@@ -5086,6 +5117,16 @@
           <div class="scan-feature-name">讲评建议</div>
           <div class="scan-feature-desc">知识点失分排序 · 智能讲评优先级</div>
         </div>
+
+        <div class="scan-feature-card scan-feature-card--demo" style="animation-delay:0.45s" onclick="enterDemoMode()">
+          <div class="scan-feature-icon">
+            <svg viewBox="0 0 24 24">
+              <polyline points="3 12 7 12 9 7 13 17 15 12 21 12"/>
+              <circle cx="18" cy="12" r="2.2" fill="currentColor" stroke="none"/>
+            </svg>
+          </div>
+          <div class="scan-feature-name">演示示例</div>
+        </div>
       </div>
     </section>
 
@@ -5566,8 +5607,78 @@
      涵盖选择题10道、填空题10道、解答题10道
      每道题包含：id, type, knowledgePoints, difficulty, score, scoreRate, question, answer
      ======================================================================== */
-  // 示例题目已移除，所有题目数据均来自用户上传分析的真实试卷
-  const DEMO_QUESTIONS = [];
+  // 演示示例数据仅在用户手动点击“演示示例”时加载，不会保存到线上账号数据库。
+  const DEMO_QUESTIONS = [
+    {
+      id: 'demo-q1',
+      type: '选择题',
+      knowledgePoints: ['勾股定理'],
+      difficulty: '简单',
+      score: 5,
+      scoreRate: 92,
+      question: '在 Rt△ABC 中，∠C=90°，AC=3，BC=4，则 AB 的长为多少？',
+      answer: 'AB=5。根据勾股定理，AB=√(3²+4²)=5。'
+    },
+    {
+      id: 'demo-q2',
+      type: '填空题',
+      knowledgePoints: ['一次函数'],
+      difficulty: '中等',
+      score: 6,
+      scoreRate: 68,
+      question: '若一次函数 y=kx+b 经过点 (0,2) 和 (1,5)，则 k=___，b=___。',
+      answer: 'k=3，b=2。'
+    },
+    {
+      id: 'demo-q3',
+      type: '解答题',
+      knowledgePoints: ['二次函数', '方程求解'],
+      difficulty: '困难',
+      score: 12,
+      scoreRate: 45,
+      question: '已知二次函数 y=x²-2x-3，求其顶点坐标，并求与 x 轴的交点。',
+      answer: '顶点为 (1,-4)，与 x 轴交于 (-1,0) 和 (3,0)。'
+    },
+    {
+      id: 'demo-q4',
+      type: '判断题',
+      knowledgePoints: ['概率统计'],
+      difficulty: '简单',
+      score: 4,
+      scoreRate: 80,
+      question: '掷一枚均匀骰子，出现偶数点的概率是 1/2。判断正误。',
+      answer: '正确。偶数点为 2、4、6，共 3 个，概率为 3/6=1/2。'
+    },
+    {
+      id: 'demo-q5',
+      type: '解答题',
+      knowledgePoints: ['几何证明'],
+      difficulty: '中等',
+      score: 10,
+      scoreRate: 58,
+      question: '在平行四边形 ABCD 中，E、F 分别是 BC、AD 的中点，证明 △ABE≌△CDF。',
+      answer: '由平行四边形性质得 AB=CD，∠B=∠D；又 BE=DF，所以 △ABE≌△CDF。'
+    },
+    {
+      id: 'demo-q6',
+      type: '填空题',
+      knowledgePoints: ['数据分析'],
+      difficulty: '简单',
+      score: 4,
+      scoreRate: 88,
+      question: '数据 2, 4, 6, 8, 10 的平均数是 ___。',
+      answer: '6。'
+    }
+  ];
+
+  const DEMO_SAMPLE_STUDENTS = [
+    { name: '张明', id: 'D001', class: '演示班', avgRate: 86, totalQuestions: 6,
+      kpData: { '勾股定理': 92, '一次函数': 75, '二次函数': 62, '方程求解': 70, '几何证明': 66, '数据分析': 90 } },
+    { name: '李华', id: 'D002', class: '演示班', avgRate: 72, totalQuestions: 6,
+      kpData: { '勾股定理': 80, '一次函数': 68, '二次函数': 48, '方程求解': 60, '几何证明': 55, '数据分析': 82 } },
+    { name: '王芳', id: 'D003', class: '演示班', avgRate: 91, totalQuestions: 6,
+      kpData: { '勾股定理': 96, '一次函数': 88, '二次函数': 84, '方程求解': 90, '几何证明': 86, '数据分析': 94 } }
+  ];
 
 
   /* ========================================================================
@@ -10607,15 +10718,34 @@
 
 
   /* ========================================================================
-     第十六部分：演示模式（已停用）
+     第十六部分：演示示例
      ======================================================================== */
 
   /**
-   * 演示模式已停用 — 所有数据来自用户上传的真实试卷
+   * 手动进入演示示例。只加载本地示例数据，不写入线上账号数据库。
    */
   function enterDemoMode() {
-    showToast('演示模式已停用，请上传真实试卷进行分析', 'info', 3000);
-    switchView('home');
+    if (state.questions.length > 0 && !state.isDemoMode) {
+      var ok = confirm('当前页面已有试卷数据，进入演示示例会临时切换为示例数据。是否继续？');
+      if (!ok) return;
+    }
+
+    state.isDemoMode = true;
+    state.questions = normalizeQuestions(DEMO_QUESTIONS.map(function(q) {
+      return { ...q, id: q.id + '-' + Date.now() };
+    }));
+    state.filteredQuestions = state.questions.slice();
+    DEMO_STUDENTS = DEMO_SAMPLE_STUDENTS.map(function(s) {
+      return { ...s, kpData: { ...(s.kpData || {}) } };
+    });
+    state.lastScannedPhotos = [];
+    saveQuestions();
+    updateDemoBanner();
+    updateUI();
+    if (state.currentView === 'students') renderStudentList();
+    switchView('search');
+    updateSearchViewVisibility();
+    showToast('已进入演示示例，可体验试卷分析、智能阅卷和讲评建议', 'success', 3500);
   }
 
   /**
@@ -10623,10 +10753,14 @@
    */
   function updateDemoBanner() {
     const banner = $('#demoBanner');
-    if (banner) banner.classList.remove('show');
+    if (banner) {
+      banner.textContent = '演示示例 - 当前使用本地示例数据，不会保存到线上账号数据库。上传真实试卷后将切回正常数据。';
+      banner.classList.toggle('show', !!state.isDemoMode);
+      banner.style.display = state.isDemoMode ? 'block' : 'none';
+    }
     const settingsMode = $('#settingsMode');
     if (settingsMode) {
-      settingsMode.textContent = state.apiAvailable ? '正常模式' : '未连接';
+      settingsMode.textContent = state.isDemoMode ? '演示示例' : (state.apiAvailable ? '正常模式' : '未连接');
     }
   }
 
