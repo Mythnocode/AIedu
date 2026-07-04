@@ -1,6 +1,7 @@
 name = "exam-analyzer-worker"
 main = "src/index.ts"
 compatibility_date = "2026-07-02"
+workers_dev = true
 
 [vars]
 DEEPSEEK_MODEL = "deepseek-chat"
