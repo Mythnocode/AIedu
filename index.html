@@ -5604,6 +5604,20 @@
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 
+  function createTimeoutSignal(ms) {
+    if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+      return AbortSignal.timeout(ms);
+    }
+    if (typeof AbortController === 'undefined') {
+      return undefined;
+    }
+    const controller = new AbortController();
+    setTimeout(function() {
+      controller.abort();
+    }, ms);
+    return controller.signal;
+  }
+
   async function apiFetch(path, options = {}) {
     const headers = options.headers ? { ...options.headers } : {};
     let response;
@@ -5612,7 +5626,7 @@
         ...options,
         headers,
         credentials: 'include',
-        signal: options.signal || AbortSignal.timeout(CONFIG.API_TIMEOUT),
+        signal: options.signal || createTimeoutSignal(CONFIG.API_TIMEOUT),
       });
     } catch (error) {
       throw new Error(await getNetworkFailureMessage(error));
@@ -5635,7 +5649,7 @@
       try {
         const health = await fetch(`${CONFIG.API_BASE}/api/health`, {
           method: 'GET',
-          signal: AbortSignal.timeout(5000),
+          signal: createTimeoutSignal(5000),
         });
         if (health.ok) {
           return '线上分析服务可访问，但本次请求被中断。请减少单次上传页数，或使用压缩后的图片再试。';
@@ -10468,7 +10482,7 @@
     if (settingsApiBase) settingsApiBase.textContent = CONFIG.API_BASE;
 
     try {
-      await apiFetch('/api/health', { method: 'GET', signal: AbortSignal.timeout(3000) });
+      await apiFetch('/api/health', { method: 'GET', signal: createTimeoutSignal(3000) });
       state.apiAvailable = true;
       dot.className = 'status-dot online';
       text.textContent = state.user ? '服务已连接' : '服务已连接 · 未登录';
@@ -10521,7 +10535,7 @@
       return;
     }
     try {
-      const data = await apiFetch('/api/auth/me', { method: 'GET', signal: AbortSignal.timeout(5000) });
+      const data = await apiFetch('/api/auth/me', { method: 'GET', signal: createTimeoutSignal(5000) });
       state.user = data.user || null;
       updateAuthUI();
       if (state.user) {
