@@ -6050,9 +6050,9 @@
       body += '<td>' + kpText + '</td>';
       body += '<td>' + (q.difficulty || '—') + '</td>';
       body += '<td>' + (q.score || 0) + '</td>';
-      body += '<td class="grade-score-cell" id="gradeScore-' + i + '">—</td>';
-      body += '<td><span class="grade-score-bar"><span class="grade-score-fill" style="width:0%;background:' + rateColor + ';" id="gradeBar-' + i + '"></span></span><span id="gradeRate-' + i + '">—</span></td>';
-      body += '<td><span class="grade-status-tag grade-status--pending" id="gradeStatus-' + i + '">待批改</span></td>';
+      body += '<td class="grade-score-cell" id="gradeScore-' + i + '">' + earnedScore + '</td>';
+      body += '<td><span class="grade-score-bar"><span class="grade-score-fill" style="width:' + rate + '%;background:' + rateColor + ';" id="gradeBar-' + i + '"></span></span><span id="gradeRate-' + i + '">' + rate + '%</span></td>';
+      body += '<td><span class="grade-status-tag grade-status--' + statusClass + '" id="gradeStatus-' + i + '">' + statusText + '</span></td>';
       body += '</tr>';
     });
 
