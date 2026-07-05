@@ -2895,7 +2895,7 @@
       width: 100%;
       height: 100%;
       background: rgba(248, 250, 252, 0.95);
-      z-index: 300;
+      z-index: 1000;
       flex-direction: column;
       align-items: center;
       justify-content: center;
@@ -6016,7 +6016,8 @@
     setTimeout(function() { openAutoGrade(); }, 300);
   }
 
-  function openAutoGrade() {
+  function openAutoGrade(options) {
+    options = options || {};
     var questions = state.questions;
     var body = '';
 
@@ -6075,13 +6076,17 @@
     body += '<div style="display:flex;gap:12px;">';
     body += '<button class="feat-btn feat-btn--ghost" onclick="closeFeature();openScanPaper()">扫描新试卷</button>';
     body += '<button class="feat-btn feat-btn--ghost" onclick="exportGradeReport()">导出成绩单</button>';
-    body += '<button class="feat-btn feat-btn--primary" id="gradeRunBtn" onclick="runAutoGrade(' + questions.length + ')">一键批改</button>';
+    body += '<button class="feat-btn feat-btn--primary" id="gradeRunBtn" onclick="runAutoGrade(' + questions.length + ')">开始批改</button>';
     body += '</div></div>';
 
     openFeature(
       '<svg viewBox="0 0 24 24"><path d="M6 3 L18 3 L18 21 L6 21 Z"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/><path d="M19 6 L22 6 L22 9"/><path d="M19 18 L22 18 L22 15"/></svg>试卷自动批改',
       body
     );
+
+    if (options.autoRun && state.lastScannedPhotos && state.lastScannedPhotos.length > 0) {
+      setTimeout(function() { runAutoGrade(questions.length); }, 200);
+    }
   }
 
   function runAutoGrade(total) {
@@ -6103,12 +6108,12 @@
   async function runRealAutoGrade(total, btn) {
     if (!state.apiAvailable) {
       showToast('请先连接后端服务再进行批改', 'warning', 5000);
-      if (btn) { btn.disabled = false; btn.textContent = '一键批改'; }
+      if (btn) { btn.disabled = false; btn.textContent = '开始批改'; }
       return;
     }
     if (!state.user) {
       openAuthModal('login');
-      if (btn) { btn.disabled = false; btn.textContent = '一键批改'; }
+      if (btn) { btn.disabled = false; btn.textContent = '开始批改'; }
       return;
     }
 
@@ -6171,14 +6176,14 @@
         clearInterval(heartBeatTimer);
         hideProgress();
         showToast('未能识别出试卷内容，请确保图片清晰且包含题目和答案', 'warning', 5000);
-        if (btn) { btn.disabled = false; btn.textContent = '一键批改'; }
+        if (btn) { btn.disabled = false; btn.textContent = '开始批改'; }
       }
     } catch (e) {
       clearInterval(heartBeatTimer);
       hideProgress();
       var errMsg = (e && e.message) ? e.message : '批改失败';
       showToast('批改失败：' + errMsg, 'error', 5000);
-      if (btn) { btn.disabled = false; btn.textContent = '一键批改'; }
+      if (btn) { btn.disabled = false; btn.textContent = '开始批改'; }
     }
   }
 
@@ -6188,12 +6193,12 @@
   function runAutoGradeWithUpload(total, btn) {
     if (!state.apiAvailable) {
       showToast('请先连接后端服务再进行批改', 'warning', 5000);
-      if (btn) { btn.disabled = false; btn.textContent = '一键批改'; }
+      if (btn) { btn.disabled = false; btn.textContent = '开始批改'; }
       return;
     }
     if (!state.user) {
       openAuthModal('login');
-      if (btn) { btn.disabled = false; btn.textContent = '一键批改'; }
+      if (btn) { btn.disabled = false; btn.textContent = '开始批改'; }
       return;
     }
 
@@ -6207,7 +6212,7 @@
     fileInput.addEventListener('change', async function(e) {
       var files = e.target.files;
       if (!files || files.length === 0) {
-        if (btn) { btn.disabled = false; btn.textContent = '一键批改'; }
+        if (btn) { btn.disabled = false; btn.textContent = '开始批改'; }
         return;
       }
 
@@ -6220,7 +6225,7 @@
 
       if (dataUrls.length === 0) {
         showToast('无法读取图片文件', 'error');
-        if (btn) { btn.disabled = false; btn.textContent = '一键批改'; }
+        if (btn) { btn.disabled = false; btn.textContent = '开始批改'; }
         return;
       }
 
@@ -8631,9 +8636,9 @@
 
       setTimeout(function() {
         hideProgress();
-        showToast('扫描识别成功！共 ' + allQuestions.length + ' 道题目，即将进入批改', 'success', 3000);
-        // 自动打开试卷自动批改
-        openAutoGrade();
+        showToast('扫描识别成功！共 ' + allQuestions.length + ' 道题目，正在进入批改', 'success', 3000);
+        // 扫描流程本身就是批改入口，识别完成后直接进入批改，不再要求用户二次点击。
+        openAutoGrade({ autoRun: true });
       }, 1000);
     } else {
       hideProgress();
