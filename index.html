@@ -11704,27 +11704,33 @@
     body += '<input type="text" class="add-student-input" id="newStudentClassCustom" placeholder="输入新班级名称" style="' + (classes.length === 0 ? 'display:block;' : 'display:none;') + 'margin-top:8px;" />';
     body += '</div>';
 
-    // 平均得分率
-    body += '<div class="add-student-field">';
-    body += '<label class="add-student-label">平均得分率（可选）</label>';
-    body += '<input type="number" class="add-student-input" id="newStudentAvgRate" placeholder="0-100，留空则随机生成" min="0" max="100" />';
-    body += '</div>';
+    // 平均得分率（有试卷数据时才显示）
+    if (state.questions.length > 0) {
+      body += '<div class="add-student-field">';
+      body += '<label class="add-student-label">平均得分率（可选）</label>';
+      body += '<input type="number" class="add-student-input" id="newStudentAvgRate" placeholder="0-100，留空则随机生成" min="0" max="100" />';
+      body += '</div>';
 
-    // 知识点初始数据（可选，留空则根据平均分自动生成）
-    body += '<div class="add-student-field">';
-    body += '<label class="add-student-label">知识点掌握情况（可选）</label>';
-    body += '<div style="font-size:13px;color:var(--color-text-muted);margin-bottom:8px;">留空则根据平均得分率自动生成各知识点成绩</div>';
-    var allKps = getAllStudentKps();
-    if (allKps.length > 0) {
-      allKps.forEach(function(kp) {
-        body += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">';
-        body += '<span style="flex-shrink:0;width:100px;font-size:13px;">' + kp + '</span>';
-        body += '<input type="number" class="add-student-input" id="newStudentKp_' + kp.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '') + '" placeholder="自动" min="0" max="100" style="flex:1;" />';
-        body += '<span style="font-size:13px;color:var(--color-text-muted);">%</span>';
-        body += '</div>';
-      });
+      // 知识点初始数据（可选，留空则根据平均分自动生成）
+      body += '<div class="add-student-field">';
+      body += '<label class="add-student-label">知识点掌握情况（可选）</label>';
+      body += '<div style="font-size:13px;color:var(--color-text-muted);margin-bottom:8px;">留空则根据平均得分率自动生成各知识点成绩</div>';
+      var allKps = getAllStudentKps();
+      if (allKps.length > 0) {
+        allKps.forEach(function(kp) {
+          body += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">';
+          body += '<span style="flex-shrink:0;width:100px;font-size:13px;">' + kp + '</span>';
+          body += '<input type="number" class="add-student-input" id="newStudentKp_' + kp.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '') + '" placeholder="自动" min="0" max="100" style="flex:1;" />';
+          body += '<span style="font-size:13px;color:var(--color-text-muted);">%</span>';
+          body += '</div>';
+        });
+      }
+      body += '</div>';
+    } else {
+      body += '<div class="add-student-field">';
+      body += '<div style="font-size:13px;color:var(--color-text-muted);padding:12px;background:var(--color-bg-secondary);border-radius:8px;line-height:1.6;">暂无试卷数据，平均得分率和知识点掌握情况将在上传试卷分析后自动生成</div>';
+      body += '</div>';
     }
-    body += '</div>';
 
     body += '<div class="feature-footer" style="border-top:none;padding:20px 0 0;justify-content:flex-end;">';
     body += '<button class="feat-btn feat-btn--ghost" onclick="closeFeature()">取消</button>';
@@ -11771,7 +11777,8 @@
     if (classVal === 'new' && customClass) {
       classVal = customClass.value.trim();
     }
-    var avgRateInput = document.getElementById('newStudentAvgRate').value;
+    var avgRateEl = document.getElementById('newStudentAvgRate');
+    var avgRateInput = avgRateEl ? avgRateEl.value : '';
 
     // 验证必填
     if (!name) { showToast('请输入学生姓名', 'warning'); return; }
@@ -11784,29 +11791,39 @@
       return;
     }
 
+    // 没有试卷数据时，不生成随机分数
+    var hasQuestions = state.questions.length > 0;
+
     // 平均得分率
-    var avgRate = avgRateInput ? parseInt(avgRateInput) : Math.floor(Math.random() * 40 + 55);
+    var avgRate;
+    if (hasQuestions) {
+      avgRate = avgRateInput ? parseInt(avgRateInput) : Math.floor(Math.random() * 40 + 55);
+    } else {
+      avgRate = avgRateInput ? parseInt(avgRateInput) : 0;
+    }
     avgRate = Math.max(0, Math.min(100, avgRate));
 
     // 知识点数据
     var kpData = {};
-    var allKps = getAllStudentKps();
-    allKps.forEach(function(kp) {
-      var inputEl = document.getElementById('newStudentKp_' + kp.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, ''));
-      if (inputEl && inputEl.value) {
-        kpData[kp] = Math.max(0, Math.min(100, parseInt(inputEl.value)));
-      } else {
-        // 根据平均分上下浮动生成
-        kpData[kp] = Math.max(0, Math.min(100, avgRate + Math.floor(Math.random() * 30 - 15)));
-      }
-    });
+    if (hasQuestions) {
+      var allKps = getAllStudentKps();
+      allKps.forEach(function(kp) {
+        var inputEl = document.getElementById('newStudentKp_' + kp.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, ''));
+        if (inputEl && inputEl.value) {
+          kpData[kp] = Math.max(0, Math.min(100, parseInt(inputEl.value)));
+        } else {
+          // 根据平均分上下浮动生成
+          kpData[kp] = Math.max(0, Math.min(100, avgRate + Math.floor(Math.random() * 30 - 15)));
+        }
+      });
+    }
 
     var studentPayload = {
       name: name,
       id: id,
       class: classVal,
       avgRate: avgRate,
-      totalQuestions: Math.floor(Math.random() * 15 + 20),
+      totalQuestions: hasQuestions ? Math.floor(Math.random() * 15 + 20) : 0,
       kpData: kpData
     };
 
@@ -11874,12 +11891,24 @@
       card.style.animationDelay = `${Math.min(index * 0.05, 0.5)}s`;
       const rateColor = getScoreRateColor(s.avgRate);
       const safeName = escapeHtml(s.name);
+      const hasExamData = s.avgRate > 0 || s.totalQuestions > 0 || Object.keys(s.kpData || {}).length > 0;
 
-      // 知识点小标签
-      const kpTags = Object.entries(s.kpData).map(([kp, rate]) => {
+      // 知识点小标签（有数据才显示）
+      const kpTags = hasExamData ? Object.entries(s.kpData).map(([kp, rate]) => {
         const c = getScoreRateColor(rate);
         return `<span class="question-kp-tag" style="color:${c};font-weight:600;">${escapeHtml(kp)} ${rate}%</span>`;
-      }).join('');
+      }).join('') : '';
+
+      // 分数区域：有数据时显示分数，无数据时显示提示
+      const scoreSection = hasExamData
+        ? `<span class="question-score">做题量：<strong>${s.totalQuestions}</strong>道</span>
+           <span class="question-rate">
+             平均得分率：<strong style="color:${rateColor}">${s.avgRate}%</strong>
+             <div class="question-rate-bar">
+               <div class="question-rate-fill" style="width:${s.avgRate}%;background:${rateColor};"></div>
+             </div>
+           </span>`
+        : `<span style="font-size:var(--font-size-sm);color:var(--color-text-muted);">暂无试卷数据，上传试卷后自动更新</span>`;
 
       card.innerHTML = `
         <div class="question-card-header">
@@ -11888,13 +11917,7 @@
           </span>
           <span class="priority-kp-name" style="font-size:16px;">${safeName}</span>
           <span style="font-size:var(--font-size-sm);color:var(--color-text-muted);">学号：${escapeHtml(s.id)}</span>
-          <span class="question-score">做题量：<strong>${s.totalQuestions}</strong>道</span>
-          <span class="question-rate">
-            平均得分率：<strong style="color:${rateColor}">${s.avgRate}%</strong>
-            <div class="question-rate-bar">
-              <div class="question-rate-fill" style="width:${s.avgRate}%;background:${rateColor};"></div>
-            </div>
-          </span>
+          ${scoreSection}
           <div class="student-card-actions">
             <button class="student-card-action-btn" onclick="editStudent('${s.dbId}')" title="编辑学生信息">
               <svg viewBox="0 0 20 20"><path d="M14 4 L16 6 L8 14 L4 15 L5 11 Z"/><path d="M13 5 L15 7"/></svg>
@@ -11906,9 +11929,7 @@
             </button>
           </div>
         </div>
-        <div class="question-card-header" style="margin-bottom:0;">
-          ${kpTags}
-        </div>
+        ${hasExamData ? `<div class="question-card-header" style="margin-bottom:0;">${kpTags}</div>` : ''}
       `;
       container.appendChild(card);
     });
@@ -12017,29 +12038,35 @@
     body += '<input type="text" class="add-student-input" id="editStudentClassCustom" placeholder="输入新班级名称" style="display:none;margin-top:8px;" />';
     body += '</div>';
 
-    // 平均得分率
-    body += '<div class="add-student-field">';
-    body += '<label class="add-student-label">平均得分率</label>';
-    body += '<input type="number" class="add-student-input" id="editStudentAvgRate" value="' + student.avgRate + '" min="0" max="100" />';
-    body += '</div>';
+    // 平均得分率（有试卷数据时才显示）
+    if (state.questions.length > 0) {
+      body += '<div class="add-student-field">';
+      body += '<label class="add-student-label">平均得分率</label>';
+      body += '<input type="number" class="add-student-input" id="editStudentAvgRate" value="' + student.avgRate + '" min="0" max="100" />';
+      body += '</div>';
 
-    // 知识点数据
-    body += '<div class="add-student-field">';
-    body += '<label class="add-student-label">知识点掌握情况</label>';
-    var allKps = getAllStudentKps();
-    if (allKps.length > 0) {
-      allKps.forEach(function(kp) {
-        var val = student.kpData && student.kpData[kp] !== undefined ? student.kpData[kp] : '';
-        body += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">';
-        body += '<span style="flex-shrink:0;width:100px;font-size:13px;">' + escapeHtml(kp) + '</span>';
-        body += '<input type="number" class="add-student-input" id="editStudentKp_' + kp.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '') + '" value="' + val + '" min="0" max="100" style="flex:1;" />';
-        body += '<span style="font-size:13px;color:var(--color-text-muted);">%</span>';
-        body += '</div>';
-      });
+      // 知识点数据
+      body += '<div class="add-student-field">';
+      body += '<label class="add-student-label">知识点掌握情况</label>';
+      var allKps = getAllStudentKps();
+      if (allKps.length > 0) {
+        allKps.forEach(function(kp) {
+          var val = student.kpData && student.kpData[kp] !== undefined ? student.kpData[kp] : '';
+          body += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">';
+          body += '<span style="flex-shrink:0;width:100px;font-size:13px;">' + escapeHtml(kp) + '</span>';
+          body += '<input type="number" class="add-student-input" id="editStudentKp_' + kp.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '') + '" value="' + val + '" min="0" max="100" style="flex:1;" />';
+          body += '<span style="font-size:13px;color:var(--color-text-muted);">%</span>';
+          body += '</div>';
+        });
+      } else {
+        body += '<div style="font-size:13px;color:var(--color-text-muted);">暂无知识点数据，上传试卷分析后自动生成</div>';
+      }
+      body += '</div>';
     } else {
-      body += '<div style="font-size:13px;color:var(--color-text-muted);">暂无知识点数据，上传试卷分析后自动生成</div>';
+      body += '<div class="add-student-field">';
+      body += '<div style="font-size:13px;color:var(--color-text-muted);padding:12px;background:var(--color-bg-secondary);border-radius:8px;line-height:1.6;">暂无试卷数据，平均得分率和知识点掌握情况将在上传试卷分析后自动生成</div>';
+      body += '</div>';
     }
-    body += '</div>';
 
     body += '<div class="feature-footer" style="border-top:none;padding:20px 0 0;justify-content:flex-end;">';
     body += '<button class="feat-btn feat-btn--ghost" onclick="closeFeature()">取消</button>';
@@ -12091,25 +12118,29 @@
     if (classVal === 'new' && customClass) {
       classVal = customClass.value.trim();
     }
-    var avgRateInput = document.getElementById('editStudentAvgRate').value;
+    var avgRateEl = document.getElementById('editStudentAvgRate');
+    var avgRateInput = avgRateEl ? avgRateEl.value : '';
 
     if (!name) { showToast('请输入学生姓名', 'warning'); return; }
     if (!classVal) { showToast('请选择或输入班级', 'warning'); return; }
 
-    var avgRate = avgRateInput ? parseInt(avgRateInput) : 60;
+    var hasQuestions = state.questions.length > 0;
+    var avgRate = avgRateInput !== '' ? parseInt(avgRateInput) : (hasQuestions ? 60 : 0);
     avgRate = Math.max(0, Math.min(100, avgRate));
 
     // 知识点数据
     var kpData = {};
-    var allKps = getAllStudentKps();
-    allKps.forEach(function(kp) {
-      var inputEl = document.getElementById('editStudentKp_' + kp.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, ''));
-      if (inputEl && inputEl.value !== '') {
-        kpData[kp] = Math.max(0, Math.min(100, parseInt(inputEl.value)));
-      } else if (student.kpData && student.kpData[kp] !== undefined) {
-        kpData[kp] = student.kpData[kp];
-      }
-    });
+    if (hasQuestions) {
+      var allKps = getAllStudentKps();
+      allKps.forEach(function(kp) {
+        var inputEl = document.getElementById('editStudentKp_' + kp.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, ''));
+        if (inputEl && inputEl.value !== '') {
+          kpData[kp] = Math.max(0, Math.min(100, parseInt(inputEl.value)));
+        } else if (student.kpData && student.kpData[kp] !== undefined) {
+          kpData[kp] = student.kpData[kp];
+        }
+      });
+    }
 
     var payload = {
       dbId: dbId,
