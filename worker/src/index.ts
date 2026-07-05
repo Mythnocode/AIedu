@@ -537,7 +537,7 @@ async function gradeEssayWithDeepSeek(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: env.DEEPSEEK_MODEL || 'deepseek-chat',
+      ...getDeepSeekRequestOptions(env),
       temperature: 0.3,
       response_format: { type: 'json_object' },
       messages: [
@@ -706,7 +706,7 @@ async function handleMentalMathOcr(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: env.DEEPSEEK_MODEL || 'deepseek-chat',
+      ...getDeepSeekRequestOptions(env),
       temperature: 0.1,
       messages: [
         { role: 'system', content: '你只输出从 OCR 文字中提取出的数学算式，每行一个，格式如 "1 + 2 = 3"。' },
@@ -927,7 +927,7 @@ async function gradeWithDeepSeek(recognizedText: string, env: Env): Promise<Anal
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: env.DEEPSEEK_MODEL || 'deepseek-chat',
+        ...getDeepSeekRequestOptions(env),
         temperature: 0.2,
         response_format: { type: 'json_object' },
         messages: [
@@ -1420,7 +1420,7 @@ async function analyzeWithDeepSeek(ocrText: string, env: Env): Promise<AnalysisR
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: env.DEEPSEEK_MODEL || 'deepseek-chat',
+      ...getDeepSeekRequestOptions(env),
       temperature: 0.2,
       response_format: { type: 'json_object' },
       messages: [
@@ -1722,6 +1722,14 @@ function assertDeepSeekConfigured(env: Env): void {
 
 function assertOpenAiConfigured(env: Env): void {
   assertKeys([['GEEKSPACE_API_KEY 或 OPENAI_API_KEY', env.GEEKSPACE_API_KEY || env.OPENAI_API_KEY]]);
+}
+
+function getDeepSeekRequestOptions(env: Env): { model: string; thinking?: { type: 'disabled' } } {
+  const model = env.DEEPSEEK_MODEL || 'deepseek-v4-pro';
+  if (model.startsWith('deepseek-v4')) {
+    return { model, thinking: { type: 'disabled' } };
+  }
+  return { model };
 }
 
 function assertKeys(entries: Array<[string, string | undefined]>): void {
