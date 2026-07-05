@@ -3304,7 +3304,7 @@
     }
     .grade-summary {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(5, 1fr);
       gap: 16px;
       margin-bottom: 24px;
     }
@@ -6016,18 +6016,22 @@
 
     // 统计区
     var totalScore = 0, totalMax = 0;
+    var correctCount = 0, wrongCount = 0, unansweredCount = 0;
     questions.forEach(function(q) {
       totalMax += q.score || 0;
       totalScore += Math.round((q.score || 0) * (q.scoreRate || 0) / 100);
+      var rate = q.scoreRate || 0;
+      if (rate === 0) { unansweredCount++; }
+      else if (rate >= 60) { correctCount++; }
+      else { wrongCount++; }
     });
-    var correctCount = questions.filter(function(q) { return (q.scoreRate || 0) >= 60; }).length;
-    var wrongCount = questions.length - correctCount;
     var avgRate = questions.length > 0 ? Math.round(questions.reduce(function(s, q) { return s + (q.scoreRate || 0); }, 0) / questions.length) : 0;
 
     body += '<div class="grade-summary">';
     body += '<div class="grade-summary-card"><div class="grade-summary-value">' + totalScore + '</div><div class="grade-summary-label">总得分 / ' + totalMax + '</div></div>';
     body += '<div class="grade-summary-card"><div class="grade-summary-value">' + correctCount + '</div><div class="grade-summary-label">批改正确</div></div>';
     body += '<div class="grade-summary-card"><div class="grade-summary-value" style="color:#EF4444;">' + wrongCount + '</div><div class="grade-summary-label">批改错误</div></div>';
+    body += '<div class="grade-summary-card"><div class="grade-summary-value" style="color:#F59E0B;">' + unansweredCount + '</div><div class="grade-summary-label">未作答</div></div>';
     body += '<div class="grade-summary-card"><div class="grade-summary-value" style="color:#10B981;">' + avgRate + '%</div><div class="grade-summary-label">平均得分率</div></div>';
     body += '</div>';
 
@@ -6040,8 +6044,8 @@
       var earnedScore = Math.round((q.score || 0) * (q.scoreRate || 0) / 100);
       var rate = q.scoreRate || 0;
       var rateColor = rate >= 80 ? '#10B981' : (rate >= 60 ? '#F59E0B' : '#EF4444');
-      var statusClass = rate >= 60 ? 'correct' : 'wrong';
-      var statusText = rate >= 60 ? '正确' : '错误';
+      var statusClass = rate >= 60 ? 'correct' : (rate === 0 ? 'pending' : 'wrong');
+      var statusText = rate >= 60 ? '正确' : (rate === 0 ? '未作答' : '错误');
       var kpText = (q.knowledgePoints || ['未分类']).join('、');
 
       body += '<tr id="gradeRow-' + i + '">';
@@ -6220,23 +6224,27 @@
 
         // 更新统计区
         var totalScore = 0, totalMax = 0;
-        var correctCount = 0, wrongCount = 0;
+        var correctCount = 0, wrongCount = 0, unansweredCount = 0;
         questions.forEach(function(q) {
           totalMax += q.score || 0;
           var earned = Math.round((q.score || 0) * (q.scoreRate || 0) / 100);
           totalScore += earned;
-          if ((q.scoreRate || 0) >= 60) correctCount++; else wrongCount++;
+          var rate = q.scoreRate || 0;
+          if (rate === 0) { unansweredCount++; }
+          else if (rate >= 60) { correctCount++; }
+          else { wrongCount++; }
         });
         var avgRate = questions.length > 0 ? Math.round(questions.reduce(function(s, q) { return s + (q.scoreRate || 0); }, 0) / questions.length) : 0;
 
         // 更新顶部统计
         var summaryCards = document.querySelectorAll('.grade-summary-card');
-        if (summaryCards.length >= 4) {
+        if (summaryCards.length >= 5) {
           summaryCards[0].querySelector('.grade-summary-value').textContent = totalScore;
           summaryCards[0].querySelector('.grade-summary-label').textContent = '总得分 / ' + totalMax;
           summaryCards[1].querySelector('.grade-summary-value').textContent = correctCount;
           summaryCards[2].querySelector('.grade-summary-value').textContent = wrongCount;
-          summaryCards[3].querySelector('.grade-summary-value').textContent = avgRate + '%';
+          summaryCards[3].querySelector('.grade-summary-value').textContent = unansweredCount;
+          summaryCards[4].querySelector('.grade-summary-value').textContent = avgRate + '%';
         }
 
         showToast('批改完成！正确 ' + correctCount + ' 题，错误 ' + wrongCount + ' 题', 'success', 4000);
@@ -6247,8 +6255,8 @@
       var earnedScore = Math.round((q.score || 0) * (q.scoreRate || 0) / 100);
       var rate = q.scoreRate || 0;
       var rateColor = rate >= 80 ? '#10B981' : (rate >= 60 ? '#F59E0B' : '#EF4444');
-      var statusClass = rate >= 60 ? 'correct' : 'wrong';
-      var statusText = rate >= 60 ? '正确' : '错误';
+      var statusClass = rate >= 60 ? 'correct' : (rate === 0 ? 'pending' : 'wrong');
+      var statusText = rate >= 60 ? '正确' : (rate === 0 ? '未作答' : '错误');
 
       var scoreCell = $('#gradeScore-' + i);
       var barCell = $('#gradeBar-' + i);

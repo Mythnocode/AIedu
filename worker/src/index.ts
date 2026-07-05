@@ -1439,7 +1439,7 @@ async function analyzeWithDeepSeek(ocrText: string, env: Env): Promise<AnalysisR
     throw new Error('DeepSeek 未返回有效分析结果。');
   }
 
-  return normalizeAnalysis(parseJsonObject(content));
+  return normalizeAnalysis(parseJsonObject(content), true);
 }
 
 function parseJsonObject<T = Record<string, unknown>>(content: string): T {
@@ -1452,8 +1452,13 @@ function parseJsonObject<T = Record<string, unknown>>(content: string): T {
   }
 }
 
-function normalizeAnalysis(value: Partial<AnalysisResult>): AnalysisResult {
+function normalizeAnalysis(value: Partial<AnalysisResult>, clearScoreRate = false): AnalysisResult {
   const questions = normalizeQuestions(Array.isArray(value.questions) ? value.questions : []);
+
+  // 分析流程不输出得分率，清空 DeepSeek 可能臆断的分数
+  if (clearScoreRate) {
+    questions.forEach((q) => { q.scoreRate = 0; q.rate = 0; q.isCorrect = false; });
+  }
 
   return {
     summary: value.summary || '已完成试卷结构与讲评重点分析。',
