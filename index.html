@@ -496,6 +496,74 @@
       display: none;
     }
 
+    /* 学情看板空状态提示 */
+    .home-empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px 80px;
+      text-align: center;
+      animation: fadeInUp 0.4s ease;
+    }
+    .home-empty-icon {
+      margin-bottom: 20px;
+      opacity: 0.8;
+    }
+    .home-empty-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #475569;
+      margin-bottom: 10px;
+    }
+    .home-empty-desc {
+      font-size: 14px;
+      color: #94A3B8;
+      line-height: 1.6;
+      max-width: 420px;
+      margin-bottom: 28px;
+    }
+    .home-empty-actions {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .home-empty-btn {
+      display: inline-flex;
+      align-items: center;
+      padding: 10px 24px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+    .home-empty-btn--primary {
+      background: #2563EB;
+      color: #fff;
+    }
+    .home-empty-btn--primary:hover {
+      background: #1D4ED8;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+    .home-empty-btn--secondary {
+      background: #EFF6FF;
+      color: #2563EB;
+      border: 1px solid #BFDBFE;
+    }
+    .home-empty-btn--secondary:hover {
+      background: #DBEAFE;
+    }
+    body.mobile-ua .home-empty-state {
+      padding: 40px 16px 60px;
+    }
+    body.mobile-ua .home-empty-title {
+      font-size: 18px;
+    }
+
     /* 首页统计气泡（第一层） */
     .home-bubbles {
       display: flex;
@@ -4580,8 +4648,41 @@
 
       <div class="home-content">
 
+        <!-- ===== 空状态提示（无学生数据时显示） ===== -->
+        <div class="home-empty-state" id="homeEmptyState" style="display:none;">
+          <div class="home-empty-icon">
+            <svg viewBox="0 0 64 64" width="72" height="72">
+              <circle cx="22" cy="24" r="8" fill="none" stroke="#CBD5E1" stroke-width="2.5"/>
+              <path d="M8 52 Q8 40 22 40 Q36 40 36 52" fill="none" stroke="#CBD5E1" stroke-width="2.5" stroke-linecap="round"/>
+              <circle cx="44" cy="26" r="6" fill="none" stroke="#E2E8F0" stroke-width="2"/>
+              <path d="M38 52 Q38 44 44 44 Q54 44 54 52" fill="none" stroke="#E2E8F0" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="home-empty-title">暂无学情数据</div>
+          <div class="home-empty-desc">请先在「学生管理」中添加学生信息，并上传试卷进行分析后，学情看板将自动展示班级数据</div>
+          <div class="home-empty-actions">
+            <button class="home-empty-btn home-empty-btn--primary" onclick="switchView('students')">
+              <svg viewBox="0 0 20 20" width="16" height="16" style="vertical-align:middle;margin-right:4px;">
+                <circle cx="9" cy="7" r="3"/>
+                <path d="M3 17 Q3 12 9 12 Q15 12 15 17" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                <line x1="15" y1="5" x2="15" y2="11" stroke="currentColor" stroke-width="1.5"/>
+                <line x1="12" y1="8" x2="18" y2="8" stroke="currentColor" stroke-width="1.5"/>
+              </svg>
+              去添加学生
+            </button>
+            <button class="home-empty-btn home-empty-btn--secondary" onclick="switchView('search')">
+              <svg viewBox="0 0 20 20" width="16" height="16" style="vertical-align:middle;margin-right:4px;">
+                <path d="M5 3 L13 3 L17 7 L17 17 L5 17 Z" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                <line x1="8" y1="10" x2="14" y2="10" stroke="currentColor" stroke-width="1.5"/>
+                <line x1="8" y1="13" x2="12" y2="13" stroke="currentColor" stroke-width="1.5"/>
+              </svg>
+              去上传试卷
+            </button>
+          </div>
+        </div>
+
         <!-- ===== 第一层：四个统计气泡 ===== -->
-        <div class="home-bubbles">
+        <div class="home-bubbles" id="homeBubbles">
           <!-- 班级人数 -->
           <div class="home-bubble home-bubble--blue" onclick="switchView('students')">
             <div class="home-bubble-icon">
@@ -5591,135 +5692,177 @@
 
   /* ========================================================================
      第三部分：演示数据（30道模拟题目）
-     涵盖选择题10道、填空题10道、解答题10道
+     涵盖选择题8道、填空题8道、判断题4道、计算题4道、解答题4道、证明题2道
      每道题包含：id, type, knowledgePoints, difficulty, score, scoreRate, question, answer
+     满分180分
      ======================================================================== */
-  // 演示示例数据仅在用户手动点击“演示示例”时加载，不会保存到线上账号数据库。
+  // 演示示例数据仅在用户手动点击"演示示例"时加载，不会保存到线上账号数据库。
   const DEMO_QUESTIONS = [
-    {
-      id: 'demo-q1',
-      type: '选择题',
-      knowledgePoints: ['勾股定理'],
-      difficulty: '简单',
-      score: 5,
-      scoreRate: 92,
+    // ===== 选择题（8道，每题5分，共40分） =====
+    { id: 'demo-q1', type: '选择题', knowledgePoints: ['勾股定理'], difficulty: '简单', score: 5, scoreRate: 92,
       question: '在 Rt△ABC 中，∠C=90°，AC=3，BC=4，则 AB 的长为多少？',
-      answer: 'AB=5。根据勾股定理，AB=√(3²+4²)=5。'
-    },
-    {
-      id: 'demo-q2',
-      type: '填空题',
-      knowledgePoints: ['一次函数'],
-      difficulty: '中等',
-      score: 6,
-      scoreRate: 68,
-      question: '若一次函数 y=kx+b 经过点 (0,2) 和 (1,5)，则 k=___，b=___。',
-      answer: 'k=3，b=2。'
-    },
-    {
-      id: 'demo-q3',
-      type: '解答题',
-      knowledgePoints: ['二次函数', '方程求解'],
-      difficulty: '困难',
-      score: 12,
-      scoreRate: 45,
-      question: '已知二次函数 y=x²-2x-3，求其顶点坐标，并求与 x 轴的交点。',
-      answer: '顶点为 (1,-4)，与 x 轴交于 (-1,0) 和 (3,0)。'
-    },
-    {
-      id: 'demo-q4',
-      type: '判断题',
-      knowledgePoints: ['概率统计'],
-      difficulty: '简单',
-      score: 4,
-      scoreRate: 80,
-      question: '掷一枚均匀骰子，出现偶数点的概率是 1/2。判断正误。',
-      answer: '正确。偶数点为 2、4、6，共 3 个，概率为 3/6=1/2。'
-    },
-    {
-      id: 'demo-q5',
-      type: '解答题',
-      knowledgePoints: ['几何证明'],
-      difficulty: '中等',
-      score: 10,
-      scoreRate: 58,
-      question: '在平行四边形 ABCD 中，E、F 分别是 BC、AD 的中点，证明 △ABE≌△CDF。',
-      answer: '由平行四边形性质得 AB=CD，∠B=∠D；又 BE=DF，所以 △ABE≌△CDF。'
-    },
-    {
-      id: 'demo-q6',
-      type: '填空题',
-      knowledgePoints: ['数据分析'],
-      difficulty: '简单',
-      score: 4,
-      scoreRate: 88,
-      question: '数据 2, 4, 6, 8, 10 的平均数是 ___。',
-      answer: '6。'
-    }
+      answer: 'AB=5。根据勾股定理，AB=√(3²+4²)=√25=5。' },
+    { id: 'demo-q2', type: '选择题', knowledgePoints: ['一次函数'], difficulty: '中等', score: 5, scoreRate: 75,
+      question: '一次函数 y=-2x+3 的图像经过哪几个象限？',
+      answer: '经过第一、二、四象限。因为 k=-2<0，b=3>0，图像过一、二、四象限。' },
+    { id: 'demo-q3', type: '选择题', knowledgePoints: ['二次函数'], difficulty: '中等', score: 5, scoreRate: 68,
+      question: '抛物线 y=(x-1)²+2 的对称轴是？',
+      answer: '对称轴为 x=1。顶点式 y=(x-h)²+k 的对称轴为 x=h。' },
+    { id: 'demo-q4', type: '选择题', knowledgePoints: ['数据分析'], difficulty: '简单', score: 5, scoreRate: 88,
+      question: '数据 3, 5, 7, 9 的中位数是？',
+      answer: '中位数为 6。将数据从小到大排列，中间两个数 5 和 7 的平均值为 6。' },
+    { id: 'demo-q5', type: '选择题', knowledgePoints: ['勾股定理'], difficulty: '中等', score: 5, scoreRate: 65,
+      question: '直角三角形两边长分别为 6 和 8，则第三边的长为？',
+      answer: '第三边为 10 或 2√7。当 6、8 为直角边时，斜边=10；当 8 为斜边、6 为直角边时，另一直角边=√(64-36)=2√7。' },
+    { id: 'demo-q6', type: '选择题', knowledgePoints: ['概率统计'], difficulty: '简单', score: 5, scoreRate: 85,
+      question: '掷一枚均匀骰子，出现偶数点的概率是？',
+      answer: '概率为 1/2。偶数点为 2、4、6，共 3 个，概率为 3/6=1/2。' },
+    { id: 'demo-q7', type: '选择题', knowledgePoints: ['一次函数'], difficulty: '中等', score: 5, scoreRate: 72,
+      question: '若一次函数 y=kx+b 的图像不经过第三象限，则下列正确的是？',
+      answer: 'k<0 且 b≥0。不经过第三象限意味着 k<0（下降），且 b≥0（与 y 轴交点在非负半轴）。' },
+    { id: 'demo-q8', type: '选择题', knowledgePoints: ['二次函数'], difficulty: '困难', score: 5, scoreRate: 50,
+      question: '二次函数 y=ax²+bx+c 中，若 a>0，b<0，c<0，则其图像大致为？',
+      answer: '开口向上，对称轴在 y 轴右侧（x=-b/2a>0），与 y 轴交于负半轴（c<0）。' },
+
+    // ===== 填空题（8道，每题4分，共32分） =====
+    { id: 'demo-q9', type: '填空题', knowledgePoints: ['勾股定理'], difficulty: '简单', score: 4, scoreRate: 90,
+      question: '直角三角形两直角边长分别为 5 和 12，则斜边长为___。',
+      answer: '13。根据勾股定理，斜边=√(5²+12²)=√169=13。' },
+    { id: 'demo-q10', type: '填空题', knowledgePoints: ['一次函数'], difficulty: '简单', score: 4, scoreRate: 82,
+      question: '一次函数 y=2x-1 与 y 轴的交点坐标为___。',
+      answer: '(0, -1)。令 x=0，得 y=-1。' },
+    { id: 'demo-q11', type: '填空题', knowledgePoints: ['二次函数'], difficulty: '中等', score: 4, scoreRate: 60,
+      question: '将二次函数 y=x²+4x+5 化为顶点式为___。',
+      answer: 'y=(x+2)²+1。配方：y=x²+4x+4+1=(x+2)²+1，顶点为 (-2, 1)。' },
+    { id: 'demo-q12', type: '填空题', knowledgePoints: ['方程求解'], difficulty: '中等', score: 4, scoreRate: 70,
+      question: '方程 x²-5x+6=0 的解为___。',
+      answer: 'x₁=2，x₂=3。因式分解得 (x-2)(x-3)=0。' },
+    { id: 'demo-q13', type: '填空题', knowledgePoints: ['数据分析'], difficulty: '简单', score: 4, scoreRate: 88,
+      question: '数据 1, 2, 3, 4, 5 的平均数为___。',
+      answer: '3。平均数=(1+2+3+4+5)/5=3。' },
+    { id: 'demo-q14', type: '填空题', knowledgePoints: ['概率统计'], difficulty: '中等', score: 4, scoreRate: 75,
+      question: '袋中有 3 个红球和 2 个白球，从中随机摸出一个球，摸出红球的概率为___。',
+      answer: '3/5。红球3个，总球数5个，概率=3/5。' },
+    { id: 'demo-q15', type: '填空题', knowledgePoints: ['几何证明'], difficulty: '简单', score: 4, scoreRate: 80,
+      question: '平行四边形的对角线___。',
+      answer: '互相平分。平行四边形的对角线互相平分是其重要性质。' },
+    { id: 'demo-q16', type: '填空题', knowledgePoints: ['一次函数'], difficulty: '中等', score: 4, scoreRate: 68,
+      question: '若直线 y=kx+b 与直线 y=3x 平行，则 k=___。',
+      answer: 'k=3。两直线平行则斜率相等。' },
+
+    // ===== 判断题（4道，每题3分，共12分） =====
+    { id: 'demo-q17', type: '判断题', knowledgePoints: ['勾股定理'], difficulty: '简单', score: 3, scoreRate: 92,
+      question: '在任何直角三角形中，三边都满足 a²+b²=c²（c 为斜边）。判断正误。',
+      answer: '正确。这是勾股定理的基本内容。' },
+    { id: 'demo-q18', type: '判断题', knowledgePoints: ['一次函数'], difficulty: '简单', score: 3, scoreRate: 86,
+      question: '一次函数 y=kx+b 中，当 k>0 时，y 随 x 的增大而增大。判断正误。',
+      answer: '正确。k>0 时函数单调递增。' },
+    { id: 'demo-q19', type: '判断题', knowledgePoints: ['概率统计'], difficulty: '简单', score: 3, scoreRate: 90,
+      question: '必然事件的概率为 1。判断正误。',
+      answer: '正确。必然事件一定发生，概率为 1。' },
+    { id: 'demo-q20', type: '判断题', knowledgePoints: ['几何证明'], difficulty: '中等', score: 3, scoreRate: 55,
+      question: '矩形的对角线相等且互相垂直。判断正误。',
+      answer: '错误。矩形的对角线相等但不一定互相垂直（正方形才互相垂直）。' },
+
+    // ===== 计算题（4道，每题8分，共32分） =====
+    { id: 'demo-q21', type: '计算题', knowledgePoints: ['方程求解'], difficulty: '中等', score: 8, scoreRate: 72,
+      question: '解方程：x²-7x+12=0',
+      answer: 'x₁=3，x₂=4。因式分解：(x-3)(x-4)=0，所以 x=3 或 x=4。' },
+    { id: 'demo-q22', type: '计算题', knowledgePoints: ['勾股定理'], difficulty: '中等', score: 8, scoreRate: 68,
+      question: '直角三角形两边长分别为 9 和 12，求第三边的长。',
+      answer: '当 9、12 为直角边时，斜边=√(81+144)=√225=15；当 12 为斜边、9 为直角边时，另一直角边=√(144-81)=√63=3√7。' },
+    { id: 'demo-q23', type: '计算题', knowledgePoints: ['一次函数'], difficulty: '中等', score: 8, scoreRate: 62,
+      question: '求一次函数 y=3x-2 与 y=-x+6 的交点坐标。',
+      answer: '交点为 (2, 4)。联立方程：3x-2=-x+6，解得 x=2，y=4。' },
+    { id: 'demo-q24', type: '计算题', knowledgePoints: ['数据分析'], difficulty: '困难', score: 8, scoreRate: 45,
+      question: '求数据 15, 18, 21, 24, 27 的方差。',
+      answer: '方差为 18。平均数=(15+18+21+24+27)/5=21；方差=[(21-15)²+(21-18)²+(21-21)²+(21-24)²+(21-27)²]/5=(36+9+0+9+36)/5=90/5=18。' },
+
+    // ===== 解答题（4道，每题10分，共40分） =====
+    { id: 'demo-q25', type: '解答题', knowledgePoints: ['二次函数', '方程求解'], difficulty: '困难', score: 10, scoreRate: 48,
+      question: '已知抛物线 y=x²-4x+3，求：(1) 顶点坐标；(2) 对称轴；(3) 与 x 轴的交点坐标。',
+      answer: '(1) 顶点坐标为 (2, -1)。配方：y=(x-2)²-1。(2) 对称轴为 x=2。(3) 令 y=0，x²-4x+3=0，解得 x=1 或 x=3，交点为 (1,0) 和 (3,0)。' },
+    { id: 'demo-q26', type: '解答题', knowledgePoints: ['一次函数'], difficulty: '困难', score: 10, scoreRate: 42,
+      question: '某商品进价 80 元，售价 120 元时每天可卖出 100 件。售价每提高 1 元，日销量减少 2 件。求利润最大时的售价及最大利润。',
+      answer: '设售价提高 x 元，利润 W=(120+x-80)(100-2x)=(40+x)(100-2x)=-2x²+20x+4000。当 x=-20/(2×(-2))=5 时，W 最大=4200 元。此时售价为 125 元，最大利润 4200 元。' },
+    { id: 'demo-q27', type: '解答题', knowledgePoints: ['勾股定理'], difficulty: '中等', score: 10, scoreRate: 58,
+      question: '一架长 5 米的梯子靠在垂直的墙上，梯子底端离墙 3 米。(1) 梯子顶端离地面多高？(2) 若梯子顶端沿墙下滑 1 米，底端将滑出多少米？',
+      answer: '(1) 高度=√(5²-3²)=√16=4 米。(2) 下滑后顶端高度=4-1=3 米，此时底端距离=√(5²-3²)=√16=4 米，底端滑出 4-3=1 米。' },
+    { id: 'demo-q28', type: '解答题', knowledgePoints: ['数据分析', '概率统计'], difficulty: '中等', score: 10, scoreRate: 55,
+      question: '某班 20 名学生的数学成绩如下：85, 92, 78, 85, 90, 73, 85, 88, 95, 82, 85, 76, 88, 90, 85, 79, 82, 88, 85, 92。求：(1) 平均数；(2) 中位数；(3) 众数。',
+      answer: '(1) 平均数=(85+92+78+85+90+73+85+88+95+82+85+76+88+90+85+79+82+88+85+92)/20=1690/20=84.5 分。(2) 排序后第10、11个数都是85，中位数=85。(3) 众数=85（出现6次）。' },
+
+    // ===== 证明题（2道，每题12分，共24分） =====
+    { id: 'demo-q29', type: '证明题', knowledgePoints: ['几何证明'], difficulty: '中等', score: 12, scoreRate: 52,
+      question: '在平行四边形 ABCD 中，E、F 分别是 BC、AD 的中点。求证：△ABE≌△CDF。',
+      answer: '证明：∵ ABCD 是平行四边形，∴ AB=CD（对边相等），∠B=∠D（对角相等）。∵ E、F 分别是 BC、AD 的中点，∴ BE=BC/2，DF=AD/2。又 BC=AD（平行四边形对边相等），∴ BE=DF。在 △ABE 和 △CDF 中：AB=CD，∠B=∠D，BE=DF，∴ △ABE≌△CDF（SAS）。' },
+    { id: 'demo-q30', type: '证明题', knowledgePoints: ['几何证明', '勾股定理'], difficulty: '困难', score: 12, scoreRate: 38,
+      question: '在矩形 ABCD 中，E 是 BC 边上一点，AE⊥DE。求证：△ABE∽△DCE。',
+      answer: '证明：∵ ABCD 是矩形，∴ ∠B=∠C=90°，AB=DC。∵ AE⊥DE，∴ ∠AED=90°。∴ ∠BAE+∠AEB=90°，∠CED+∠AEB=90°（因为 ∠AED=∠AEB+∠CED=90°）。∴ ∠BAE=∠CED。在 △ABE 和 △DCE 中：∠B=∠C=90°，∠BAE=∠CED，∴ △ABE∽△DCE（AA）。' }
   ];
 
   const DEMO_SAMPLE_STUDENTS = [
     /* ---- 演示一班（15人） ---- */
-    { name: '张明',   id: 'D001', class: '演示一班', avgRate: 86, totalQuestions: 6,
+    { name: '张明',   id: 'D001', class: '演示一班', avgRate: 86, totalQuestions: 30,
       kpData: { '勾股定理': 92, '一次函数': 75, '二次函数': 62, '方程求解': 70, '几何证明': 66, '数据分析': 90, '概率统计': 88 } },
-    { name: '李华',   id: 'D002', class: '演示一班', avgRate: 72, totalQuestions: 6,
+    { name: '李华',   id: 'D002', class: '演示一班', avgRate: 72, totalQuestions: 30,
       kpData: { '勾股定理': 80, '一次函数': 68, '二次函数': 48, '方程求解': 60, '几何证明': 55, '数据分析': 82, '概率统计': 75 } },
-    { name: '王芳',   id: 'D003', class: '演示一班', avgRate: 91, totalQuestions: 6,
+    { name: '王芳',   id: 'D003', class: '演示一班', avgRate: 91, totalQuestions: 30,
       kpData: { '勾股定理': 96, '一次函数': 88, '二次函数': 84, '方程求解': 90, '几何证明': 86, '数据分析': 94, '概率统计': 93 } },
-    { name: '陈浩宇', id: 'D004', class: '演示一班', avgRate: 54, totalQuestions: 6,
+    { name: '陈浩宇', id: 'D004', class: '演示一班', avgRate: 54, totalQuestions: 30,
       kpData: { '勾股定理': 60, '一次函数': 52, '二次函数': 35, '方程求解': 42, '几何证明': 48, '数据分析': 68, '概率统计': 55 } },
-    { name: '刘思琪', id: 'D005', class: '演示一班', avgRate: 78, totalQuestions: 6,
+    { name: '刘思琪', id: 'D005', class: '演示一班', avgRate: 78, totalQuestions: 30,
       kpData: { '勾股定理': 85, '一次函数': 72, '二次函数': 65, '方程求解': 74, '几何证明': 70, '数据分析': 88, '概率统计': 80 } },
-    { name: '赵子轩', id: 'D006', class: '演示一班', avgRate: 63, totalQuestions: 6,
+    { name: '赵子轩', id: 'D006', class: '演示一班', avgRate: 63, totalQuestions: 30,
       kpData: { '勾股定理': 70, '一次函数': 58, '二次函数': 40, '方程求解': 55, '几何证明': 50, '数据分析': 78, '概率统计': 62 } },
-    { name: '孙雨桐', id: 'D007', class: '演示一班', avgRate: 95, totalQuestions: 6,
+    { name: '孙雨桐', id: 'D007', class: '演示一班', avgRate: 95, totalQuestions: 30,
       kpData: { '勾股定理': 98, '一次函数': 94, '二次函数': 92, '方程求解': 96, '几何证明': 90, '数据分析': 97, '概率统计': 98 } },
-    { name: '周梓涵', id: 'D008', class: '演示一班', avgRate: 81, totalQuestions: 6,
+    { name: '周梓涵', id: 'D008', class: '演示一班', avgRate: 81, totalQuestions: 30,
       kpData: { '勾股定理': 88, '一次函数': 76, '二次函数': 70, '方程求解': 78, '几何证明': 74, '数据分析': 90, '概率统计': 85 } },
-    { name: '吴俊杰', id: 'D009', class: '演示一班', avgRate: 48, totalQuestions: 6,
+    { name: '吴俊杰', id: 'D009', class: '演示一班', avgRate: 48, totalQuestions: 30,
       kpData: { '勾股定理': 55, '一次函数': 45, '二次函数': 30, '方程求解': 38, '几何证明': 42, '数据分析': 60, '概率统计': 50 } },
-    { name: '郑欣怡', id: 'D010', class: '演示一班', avgRate: 88, totalQuestions: 6,
+    { name: '郑欣怡', id: 'D010', class: '演示一班', avgRate: 88, totalQuestions: 30,
       kpData: { '勾股定理': 93, '一次函数': 82, '二次函数': 78, '方程求解': 85, '几何证明': 80, '数据分析': 95, '概率统计': 90 } },
-    { name: '王浩然', id: 'D011', class: '演示一班', avgRate: 69, totalQuestions: 6,
+    { name: '王浩然', id: 'D011', class: '演示一班', avgRate: 69, totalQuestions: 30,
       kpData: { '勾股定理': 76, '一次函数': 65, '二次函数': 50, '方程求解': 60, '几何证明': 58, '数据分析': 80, '概率统计': 70 } },
-    { name: '冯语彤', id: 'D012', class: '演示一班', avgRate: 93, totalQuestions: 6,
+    { name: '冯语彤', id: 'D012', class: '演示一班', avgRate: 93, totalQuestions: 30,
       kpData: { '勾股定理': 97, '一次函数': 90, '二次函数': 88, '方程求解': 94, '几何证明': 92, '数据分析': 96, '概率统计': 95 } },
-    { name: '陈嘉乐', id: 'D013', class: '演示一班', avgRate: 59, totalQuestions: 6,
+    { name: '陈嘉乐', id: 'D013', class: '演示一班', avgRate: 59, totalQuestions: 30,
       kpData: { '勾股定理': 66, '一次函数': 55, '二次函数': 38, '方程求解': 48, '几何证明': 52, '数据分析': 72, '概率统计': 60 } },
-    { name: '褚梦瑶', id: 'D014', class: '演示一班', avgRate: 83, totalQuestions: 6,
+    { name: '褚梦瑶', id: 'D014', class: '演示一班', avgRate: 83, totalQuestions: 30,
       kpData: { '勾股定理': 90, '一次函数': 78, '二次函数': 72, '方程求解': 80, '几何证明': 76, '数据分析': 92, '概率统计': 86 } },
-    { name: '卫子墨', id: 'D015', class: '演示一班', avgRate: 75, totalQuestions: 6,
+    { name: '卫子墨', id: 'D015', class: '演示一班', avgRate: 75, totalQuestions: 30,
       kpData: { '勾股定理': 82, '一次函数': 70, '二次函数': 58, '方程求解': 68, '几何证明': 64, '数据分析': 85, '概率统计': 78 } },
     /* ---- 演示二班（15人） ---- */
-    { name: '蒋雨泽', id: 'D016', class: '演示二班', avgRate: 90, totalQuestions: 6,
+    { name: '蒋雨泽', id: 'D016', class: '演示二班', avgRate: 90, totalQuestions: 30,
       kpData: { '勾股定理': 95, '一次函数': 86, '二次函数': 82, '方程求解': 88, '几何证明': 84, '数据分析': 94, '概率统计': 92 } },
-    { name: '沈一诺', id: 'D017', class: '演示二班', avgRate: 66, totalQuestions: 6,
+    { name: '沈一诺', id: 'D017', class: '演示二班', avgRate: 66, totalQuestions: 30,
       kpData: { '勾股定理': 72, '一次函数': 62, '二次函数': 45, '方程求解': 58, '几何证明': 54, '数据分析': 78, '概率统计': 68 } },
-    { name: '韩诗韵', id: 'D018', class: '演示二班', avgRate: 97, totalQuestions: 6,
+    { name: '韩诗韵', id: 'D018', class: '演示二班', avgRate: 97, totalQuestions: 30,
       kpData: { '勾股定理': 99, '一次函数': 96, '二次函数': 94, '方程求解': 98, '几何证明': 95, '数据分析': 98, '概率统计': 99 } },
-    { name: '杨铭轩', id: 'D019', class: '演示二班', avgRate: 52, totalQuestions: 6,
+    { name: '杨铭轩', id: 'D019', class: '演示二班', avgRate: 52, totalQuestions: 30,
       kpData: { '勾股定理': 58, '一次函数': 50, '二次函数': 32, '方程求解': 40, '几何证明': 46, '数据分析': 65, '概率统计': 53 } },
-    { name: '朱雅静', id: 'D020', class: '演示二班', avgRate: 79, totalQuestions: 6,
+    { name: '朱雅静', id: 'D020', class: '演示二班', avgRate: 79, totalQuestions: 30,
       kpData: { '勾股定理': 86, '一次函数': 74, '二次函数': 66, '方程求解': 76, '几何证明': 72, '数据分析': 88, '概率统计': 82 } },
-    { name: '秦宇豪', id: 'D021', class: '演示二班', avgRate: 61, totalQuestions: 6,
+    { name: '秦宇豪', id: 'D021', class: '演示二班', avgRate: 61, totalQuestions: 30,
       kpData: { '勾股定理': 68, '一次函数': 56, '二次函数': 42, '方程求解': 52, '几何证明': 48, '数据分析': 76, '概率统计': 62 } },
-    { name: '尤可欣', id: 'D022', class: '演示二班', avgRate: 87, totalQuestions: 6,
+    { name: '尤可欣', id: 'D022', class: '演示二班', avgRate: 87, totalQuestions: 30,
       kpData: { '勾股定理': 92, '一次函数': 82, '二次函数': 76, '方程求解': 84, '几何证明': 80, '数据分析': 94, '概率统计': 89 } },
-    { name: '许博文', id: 'D023', class: '演示二班', avgRate: 44, totalQuestions: 6,
+    { name: '许博文', id: 'D023', class: '演示二班', avgRate: 44, totalQuestions: 30,
       kpData: { '勾股定理': 50, '一次函数': 42, '二次函数': 28, '方程求解': 35, '几何证明': 38, '数据分析': 58, '概率统计': 46 } },
-    { name: '何凌薇', id: 'D024', class: '演示二班', avgRate: 92, totalQuestions: 6,
+    { name: '何凌薇', id: 'D024', class: '演示二班', avgRate: 92, totalQuestions: 30,
       kpData: { '勾股定理': 96, '一次函数': 90, '二次函数': 86, '方程求解': 93, '几何证明': 88, '数据分析': 96, '概率统计': 94 } },
-    { name: '吕志远', id: 'D025', class: '演示二班', avgRate: 71, totalQuestions: 6,
+    { name: '吕志远', id: 'D025', class: '演示二班', avgRate: 71, totalQuestions: 30,
       kpData: { '勾股定理': 78, '一次函数': 66, '二次函数': 52, '方程求解': 62, '几何证明': 60, '数据分析': 82, '概率统计': 72 } },
-    { name: '施晓彤', id: 'D026', class: '演示二班', avgRate: 84, totalQuestions: 6,
+    { name: '施晓彤', id: 'D026', class: '演示二班', avgRate: 84, totalQuestions: 30,
       kpData: { '勾股定理': 90, '一次函数': 80, '二次函数': 72, '方程求解': 82, '几何证明': 76, '数据分析': 92, '概率统计': 87 } },
-    { name: '张晨阳', id: 'D027', class: '演示二班', avgRate: 57, totalQuestions: 6,
+    { name: '张晨阳', id: 'D027', class: '演示二班', avgRate: 57, totalQuestions: 30,
       kpData: { '勾股定理': 64, '一次函数': 53, '二次函数': 36, '方程求解': 46, '几何证明': 50, '数据分析': 70, '概率统计': 58 } },
-    { name: '孔嘉怡', id: 'D028', class: '演示二班', avgRate: 89, totalQuestions: 6,
+    { name: '孔嘉怡', id: 'D028', class: '演示二班', avgRate: 89, totalQuestions: 30,
       kpData: { '勾股定理': 94, '一次函数': 85, '二次函数': 80, '方程求解': 87, '几何证明': 84, '数据分析': 95, '概率统计': 91 } },
-    { name: '曹天佑', id: 'D029', class: '演示二班', avgRate: 65, totalQuestions: 6,
+    { name: '曹天佑', id: 'D029', class: '演示二班', avgRate: 65, totalQuestions: 30,
       kpData: { '勾股定理': 72, '一次函数': 60, '二次函数': 44, '方程求解': 56, '几何证明': 52, '数据分析': 78, '概率统计': 66 } },
-    { name: '严惠敏', id: 'D030', class: '演示二班', avgRate: 77, totalQuestions: 6,
+    { name: '严惠敏', id: 'D030', class: '演示二班', avgRate: 77, totalQuestions: 30,
       kpData: { '勾股定理': 84, '一次函数': 72, '二次函数': 64, '方程求解': 72, '几何证明': 68, '数据分析': 86, '概率统计': 80 } }
   ];
 
@@ -10068,33 +10211,25 @@
   }
 
   function getDashboardAverageScore() {
-    // 优先使用学生数据
-    if (DEMO_STUDENTS.length > 0) {
-      var total = DEMO_STUDENTS.reduce(function(sum, student) {
-        return sum + parseFloat(student.avgRate || 0);
-      }, 0);
-      return total / DEMO_STUDENTS.length;
-    }
-
-    // 无学生数据时，使用题目平均得分率
-    if (state.questions.length > 0) {
-      return state.questions.reduce(function(sum, q) {
-        return sum + parseFloat(q.scoreRate || 0);
-      }, 0) / state.questions.length;
-    }
-
-    return 0;
+    // 必须有学生数据才计算平均分
+    if (DEMO_STUDENTS.length === 0) return 0;
+    var total = DEMO_STUDENTS.reduce(function(sum, student) {
+      return sum + parseFloat(student.avgRate || 0);
+    }, 0);
+    return total / DEMO_STUDENTS.length;
   }
 
   function getDashboardWrongQuestionCount() {
-    if (state.questions.length === 0) return 0;
+    // 必须有学生数据才统计错题
+    if (DEMO_STUDENTS.length === 0 || state.questions.length === 0) return 0;
     return state.questions.filter(function(q) {
       return parseFloat(q.scoreRate || 0) < 60;
     }).length;
   }
 
   function getDashboardWeakKnowledgeCount() {
-    if (state.questions.length === 0) return 0;
+    // 必须有学生数据才统计待补知识点
+    if (DEMO_STUDENTS.length === 0 || state.questions.length === 0) return 0;
 
     var weakSet = new Set();
     var kpMap = {};
@@ -10116,68 +10251,27 @@
 
   function getDashboardScoreBands() {
     var counts = [0, 0, 0, 0, 0];
-    if (DEMO_STUDENTS.length === 0 && state.questions.length === 0) return counts;
+    // 必须有学生数据才统计分数段
+    if (DEMO_STUDENTS.length === 0) return counts;
 
-    // 优先使用学生数据
-    if (DEMO_STUDENTS.length > 0) {
-      DEMO_STUDENTS.forEach(function(student) {
-        var score = parseFloat(student.avgRate || 0);
-        if (score >= 90) counts[0]++;
-        else if (score >= 80) counts[1]++;
-        else if (score >= 70) counts[2]++;
-        else if (score >= 60) counts[3]++;
-        else counts[4]++;
-      });
-      return counts;
-    }
-
-    // 无学生数据时，根据题目平均得分率模拟分数段分布
-    if (state.questions.length > 0) {
-      var avgRate = state.questions.reduce(function(sum, q) {
-        return sum + parseFloat(q.scoreRate || 0);
-      }, 0) / state.questions.length;
-
-      // 根据平均得分率模拟一个合理的班级分数段分布
-      var totalStudents = Math.max(20, state.questions.length * 2);
-      if (avgRate >= 85) {
-        counts = [
-          Math.round(totalStudents * 0.35),
-          Math.round(totalStudents * 0.30),
-          Math.round(totalStudents * 0.20),
-          Math.round(totalStudents * 0.10),
-          Math.round(totalStudents * 0.05)
-        ];
-      } else if (avgRate >= 75) {
-        counts = [
-          Math.round(totalStudents * 0.20),
-          Math.round(totalStudents * 0.30),
-          Math.round(totalStudents * 0.25),
-          Math.round(totalStudents * 0.15),
-          Math.round(totalStudents * 0.10)
-        ];
-      } else if (avgRate >= 60) {
-        counts = [
-          Math.round(totalStudents * 0.10),
-          Math.round(totalStudents * 0.20),
-          Math.round(totalStudents * 0.30),
-          Math.round(totalStudents * 0.25),
-          Math.round(totalStudents * 0.15)
-        ];
-      } else {
-        counts = [
-          Math.round(totalStudents * 0.05),
-          Math.round(totalStudents * 0.10),
-          Math.round(totalStudents * 0.20),
-          Math.round(totalStudents * 0.30),
-          Math.round(totalStudents * 0.35)
-        ];
-      }
-    }
+    DEMO_STUDENTS.forEach(function(student) {
+      var score = parseFloat(student.avgRate || 0);
+      if (score >= 90) counts[0]++;
+      else if (score >= 80) counts[1]++;
+      else if (score >= 70) counts[2]++;
+      else if (score >= 60) counts[3]++;
+      else counts[4]++;
+    });
     return counts;
   }
 
   function getDashboardKnowledgeAverages() {
     var kpMap = {};
+
+    // 必须有学生数据才计算知识点掌握度
+    if (DEMO_STUDENTS.length === 0) {
+      return { names: [], rates: [] };
+    }
 
     DEMO_STUDENTS.forEach(function(student) {
       Object.entries(student.kpData || {}).forEach(function(entry) {
@@ -10189,16 +10283,6 @@
         kpMap[kp].count++;
       });
     });
-
-    if (Object.keys(kpMap).length === 0) {
-      state.questions.forEach(function(q) {
-        (q.knowledgePoints || []).forEach(function(kp) {
-          if (!kpMap[kp]) kpMap[kp] = { sum: 0, count: 0 };
-          kpMap[kp].sum += parseFloat(q.scoreRate || 0);
-          kpMap[kp].count++;
-        });
-      });
-    }
 
     var combined = Object.keys(kpMap).map(function(kp) {
       var item = kpMap[kp];
@@ -10855,7 +10939,7 @@
     if (state.currentView === 'students') renderStudentList();
     switchView('search');
     updateSearchViewVisibility();
-    showToast('已进入演示示例（30名学生），可体验试卷分析、智能阅卷、学生管理和讲评建议', 'success', 3500);
+    showToast('已进入演示示例（30名学生·30道题），可体验试卷分析、智能阅卷、学生管理和讲评建议', 'success', 3500);
   }
 
   async function exitDemoMode() {
@@ -11708,6 +11792,28 @@
    * 渲染首页两个图表：分数段分布 + 班级平均分趋势
    */
   function renderHomeCharts() {
+    var emptyState = document.getElementById('homeEmptyState');
+    var bubbles = document.getElementById('homeBubbles');
+    var chartLayers = document.querySelectorAll('.home-charts');
+
+    // 没有学生数据时，显示空状态，隐藏气泡和图表
+    if (DEMO_STUDENTS.length === 0) {
+      if (emptyState) emptyState.style.display = 'flex';
+      if (bubbles) bubbles.style.display = 'none';
+      chartLayers.forEach(function(el) { el.style.display = 'none'; });
+      // 销毁已有图表实例
+      if (state.charts.homeScore) { state.charts.homeScore.dispose(); state.charts.homeScore = null; }
+      if (state.charts.homeTrend) { state.charts.homeTrend.dispose(); state.charts.homeTrend = null; }
+      if (state.charts.homeError) { state.charts.homeError.dispose(); state.charts.homeError = null; }
+      if (state.charts.homeRadar) { state.charts.homeRadar.dispose(); state.charts.homeRadar = null; }
+      return;
+    }
+
+    // 有学生数据时，隐藏空状态，显示气泡和图表
+    if (emptyState) emptyState.style.display = 'none';
+    if (bubbles) bubbles.style.display = '';
+    chartLayers.forEach(function(el) { el.style.display = ''; });
+
     renderHomeScoreChart();
     renderHomeTrendChart();
     renderHomeErrorChart();
@@ -11812,9 +11918,9 @@
     // 计算当前平均分
     var currentAvg = getDashboardAverageScore();
 
-    // 根据当前平均分生成近5次考试趋势数据
+    // 只有有学生数据时才生成趋势
     var trendData;
-    if (DEMO_STUDENTS.length > 0 || state.questions.length > 0) {
+    if (DEMO_STUDENTS.length > 0) {
       trendData = [
         Math.max(0, Math.round((currentAvg - 6) * 10) / 10),
         Math.max(0, Math.round((currentAvg - 3) * 10) / 10),
@@ -11926,6 +12032,12 @@
 
     // 销毁旧实例
     if (state.charts.homeError) state.charts.homeError.dispose();
+
+    // 必须有学生数据才统计错题
+    if (DEMO_STUDENTS.length === 0 || state.questions.length === 0) {
+      el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#94A3B8;font-size:14px;">暂无错题数据</div>';
+      return;
+    }
 
     var chart = echarts.init(el);
     state.charts.homeError = chart;
