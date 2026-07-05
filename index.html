@@ -10294,16 +10294,25 @@
     return DEMO_STUDENTS.length;
   }
 
-  // 获取有实际考试数据的学生（totalQuestions > 0 表示已参加过考试）
+  // 检查是否有已分析的试卷数据（有题目且至少一道被批改/有得分率）
+  function hasAnalysisData() {
+    return state.questions.length > 0 && state.questions.some(function(q) {
+      return q.graded || parseFloat(q.scoreRate || 0) > 0;
+    });
+  }
+
+  // 获取有实际考试数据的学生
+  // 注意：必须同时满足"有已分析的试卷"才返回，否则旧假数据会混入
   function getStudentsWithExamData() {
+    if (!hasAnalysisData()) return [];
     return DEMO_STUDENTS.filter(function(s) {
       return s.totalQuestions > 0 || (s.kpData && Object.keys(s.kpData).length > 0);
     });
   }
 
   function getDashboardAverageScore() {
-    // 必须有学生且有试卷分析才计算平均分
-    if (DEMO_STUDENTS.length === 0 || state.questions.length === 0) return 0;
+    // 必须有学生且有已分析的试卷才计算平均分
+    if (DEMO_STUDENTS.length === 0 || !hasAnalysisData()) return 0;
     var examStudents = getStudentsWithExamData();
     if (examStudents.length === 0) return 0;
     var total = examStudents.reduce(function(sum, student) {
@@ -10313,16 +10322,16 @@
   }
 
   function getDashboardWrongQuestionCount() {
-    // 必须有学生数据才统计错题
-    if (DEMO_STUDENTS.length === 0 || state.questions.length === 0) return 0;
+    // 必须有学生且有已分析的试卷才统计错题
+    if (DEMO_STUDENTS.length === 0 || !hasAnalysisData()) return 0;
     return state.questions.filter(function(q) {
       return parseFloat(q.scoreRate || 0) < 60;
     }).length;
   }
 
   function getDashboardWeakKnowledgeCount() {
-    // 必须有学生数据才统计待补知识点
-    if (DEMO_STUDENTS.length === 0 || state.questions.length === 0) return 0;
+    // 必须有学生且有已分析的试卷才统计待补知识点
+    if (DEMO_STUDENTS.length === 0 || !hasAnalysisData()) return 0;
 
     var weakSet = new Set();
     var kpMap = {};
@@ -10344,8 +10353,8 @@
 
   function getDashboardScoreBands() {
     var counts = [0, 0, 0, 0, 0];
-    // 必须有学生且有试卷分析才统计分数段
-    if (DEMO_STUDENTS.length === 0 || state.questions.length === 0) return counts;
+    // 必须有学生且有已分析的试卷才统计分数段
+    if (DEMO_STUDENTS.length === 0 || !hasAnalysisData()) return counts;
 
     // 只统计有考试数据的学生
     var examStudents = getStudentsWithExamData();
@@ -10363,8 +10372,8 @@
   function getDashboardKnowledgeAverages() {
     var kpMap = {};
 
-    // 必须有学生且有试卷分析才计算知识点掌握度
-    if (DEMO_STUDENTS.length === 0 || state.questions.length === 0) {
+    // 必须有学生且有已分析的试卷才计算知识点掌握度
+    if (DEMO_STUDENTS.length === 0 || !hasAnalysisData()) {
       return { names: [], rates: [] };
     }
 
@@ -11316,6 +11325,42 @@
       const data = await apiFetch('/api/students', { method: 'GET' });
       if (Array.isArray(data.students)) {
         DEMO_STUDENTS = data.students.map(normalizeStudent);
+
+        // 清理旧假数据：如果没有已分析的试卷，学生不应有成绩数据
+        // 旧代码会在添加学生时随机生成 avgRate/totalQuestions/kpData，这里清零
+        if (!hasAnalysisData()) {
+          var cleaned = false;
+          DEMO_STUDENTS.forEach(function(s) {
+            if (s.avgRate > 0 || s.totalQuestions > 0 || (s.kpData && Object.keys(s.kpData).length > 0)) {
+              s.avgRate = 0;
+              s.totalQuestions = 0;
+              s.kpData = {};
+              cleaned = true;
+            }
+          });
+          // 如果有数据被清理，尝试更新后端
+          if (cleaned) {
+            DEMO_STUDENTS.forEach(function(s) {
+              if (s.dbId) {
+                apiFetch('/api/students', {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    dbId: s.dbId,
+                    name: s.name,
+                    id: s.id,
+                    class: s.class,
+                    avgRate: 0,
+                    totalQuestions: 0,
+                    kpData: {}
+                  }),
+                }).catch(function(e) { console.warn('清理后端学生数据失败:', s.name, e); });
+              }
+            });
+            console.log('[迁移] 已清理旧假数据：' + DEMO_STUDENTS.length + ' 名学生的成绩数据已清零');
+          }
+        }
+
         if (state.currentView === 'students') renderStudentList();
         updateUI();
       }
