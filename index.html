@@ -6069,14 +6069,15 @@
 
     body += '</tbody></table></div>';
     body += '<div class="feature-footer" style="border-top:none;padding:20px 0 0;justify-content:space-between;">';
-    var photoHint = (state.lastScannedPhotos && state.lastScannedPhotos.length > 0)
+    var hasGradePhotos = state.lastScannedPhotos && state.lastScannedPhotos.length > 0;
+    var photoHint = hasGradePhotos
       ? '<span style="color:#10B981;">已保存 ' + state.lastScannedPhotos.length + ' 张试卷图片，可直接批改</span>'
       : '<span style="color:#F59E0B;">无试卷图片，点击批改后请上传含答案的试卷图片</span>';
     body += '<div style="font-size:13px;color:var(--color-text-muted);">' + photoHint + ' · 共 ' + questions.length + ' 道题 · 满分 ' + totalMax + ' 分</div>';
     body += '<div style="display:flex;gap:12px;">';
     body += '<button class="feat-btn feat-btn--ghost" onclick="closeFeature();openScanPaper()">扫描新试卷</button>';
     body += '<button class="feat-btn feat-btn--ghost" onclick="exportGradeReport()">导出成绩单</button>';
-    body += '<button class="feat-btn feat-btn--primary" id="gradeRunBtn" onclick="runAutoGrade(' + questions.length + ')">开始批改</button>';
+    body += '<button class="feat-btn feat-btn--primary" id="gradeRunBtn" onclick="runAutoGrade(' + questions.length + ')">' + (hasGradePhotos ? '开始批改' : '上传答案图片并批改') + '</button>';
     body += '</div></div>';
 
     openFeature(
@@ -6102,18 +6103,24 @@
     }
   }
 
+  function resetGradeButton(btn) {
+    if (!btn) return;
+    btn.disabled = false;
+    btn.textContent = (state.lastScannedPhotos && state.lastScannedPhotos.length > 0) ? '开始批改' : '上传答案图片并批改';
+  }
+
   /**
    * 使用扫描图片进行真实AI批改
    */
   async function runRealAutoGrade(total, btn) {
     if (!state.apiAvailable) {
       showToast('请先连接后端服务再进行批改', 'warning', 5000);
-      if (btn) { btn.disabled = false; btn.textContent = '开始批改'; }
+      resetGradeButton(btn);
       return;
     }
     if (!state.user) {
       openAuthModal('login');
-      if (btn) { btn.disabled = false; btn.textContent = '开始批改'; }
+      resetGradeButton(btn);
       return;
     }
 
@@ -6141,7 +6148,7 @@
         'AI正在逐题批改...',
         '还在努力批改中，请稍候...',
         '题目较多，正在仔细批改...',
-        '即将完成，请再等一下...',
+        '题量较多，仍在处理，请继续等待...',
       ];
       var heartBeatIdx = 0;
       var heartBeatTimer = setInterval(function() {
@@ -6176,14 +6183,14 @@
         clearInterval(heartBeatTimer);
         hideProgress();
         showToast('未能识别出试卷内容，请确保图片清晰且包含题目和答案', 'warning', 5000);
-        if (btn) { btn.disabled = false; btn.textContent = '开始批改'; }
+        resetGradeButton(btn);
       }
     } catch (e) {
       clearInterval(heartBeatTimer);
       hideProgress();
       var errMsg = (e && e.message) ? e.message : '批改失败';
       showToast('批改失败：' + errMsg, 'error', 5000);
-      if (btn) { btn.disabled = false; btn.textContent = '开始批改'; }
+      resetGradeButton(btn);
     }
   }
 
@@ -6193,12 +6200,12 @@
   function runAutoGradeWithUpload(total, btn) {
     if (!state.apiAvailable) {
       showToast('请先连接后端服务再进行批改', 'warning', 5000);
-      if (btn) { btn.disabled = false; btn.textContent = '开始批改'; }
+      resetGradeButton(btn);
       return;
     }
     if (!state.user) {
       openAuthModal('login');
-      if (btn) { btn.disabled = false; btn.textContent = '开始批改'; }
+      resetGradeButton(btn);
       return;
     }
 
@@ -6212,7 +6219,7 @@
     fileInput.addEventListener('change', async function(e) {
       var files = e.target.files;
       if (!files || files.length === 0) {
-        if (btn) { btn.disabled = false; btn.textContent = '开始批改'; }
+        resetGradeButton(btn);
         return;
       }
 
@@ -6225,7 +6232,7 @@
 
       if (dataUrls.length === 0) {
         showToast('无法读取图片文件', 'error');
-        if (btn) { btn.disabled = false; btn.textContent = '开始批改'; }
+        resetGradeButton(btn);
         return;
       }
 
@@ -9446,12 +9453,23 @@
         return;
       }
 
+      const uploadedImageFiles = state.pendingFiles.filter(file => file.type && file.type.startsWith('image/'));
+      const gradePhotoDataUrls = [];
+      for (const file of uploadedImageFiles) {
+        const dataUrl = await fileToDataURL(file).catch(error => {
+          console.warn('保存批改图片失败:', error);
+          return '';
+        });
+        if (dataUrl) gradePhotoDataUrls.push(dataUrl);
+      }
+
       updateUploadProgress(100, '分析完成！', `识别到 ${questions.length} 道题目`);
       setTimeout(() => {
         hideUploadProgress();
         // 替换题库（每次分析覆盖之前的数据，避免无限增长）
         state.questions = questions;
         state.isDemoMode = false;
+        state.lastScannedPhotos = gradePhotoDataUrls;
         saveQuestions();
         clearPendingFiles();
         updateUI();
