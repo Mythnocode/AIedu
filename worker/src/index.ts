@@ -74,6 +74,8 @@ const MAX_FILES = 6;
 const MAX_FILE_SIZE = 4 * 1024 * 1024;
 const MAX_TOTAL_FILE_SIZE = 8 * 1024 * 1024;
 const MAX_ANALYSIS_TEXT_LENGTH = 18000;
+const VISION_REQUEST_TIMEOUT_MS = 120000;
+const DEEPSEEK_REQUEST_TIMEOUT_MS = 180000;
 const SESSION_COOKIE = 'exam_analyzer_session';
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
 const PASSWORD_ITERATIONS = 100000;
@@ -786,57 +788,60 @@ async function extractPaperContentWithVision(files: File[], env: Env): Promise<s
     const mimeType = file.type || 'image/jpeg';
     const dataUrl = `data:${mimeType};base64,${imageBase64}`;
 
-    const response = await fetch(`${(env.GPT_API_BASE || 'https://geekspace.cloud/v1').replace(/\/+$/, '')}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${env.GEEKSPACE_API_KEY || env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: env.OPENAI_MODEL || 'gpt-5.5',
-        temperature: 0.1,
-        messages: [
-          {
-            role: 'system',
-            content: '你是一个专业的试卷识别助手。你需要仔细识别试卷图片中的所有内容，包括印刷的题目和手写的答案。请严格按照要求输出。',
-          },
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: [
-                  '请仔细识别这张试卷图片（第' + (i + 1) + '页）中的所有内容。',
-                  '',
-                  '识别要求：',
-                  '1. 识别每道题的题号、题型、题目内容',
-                  '2. 识别学生在每道题上手写的答案（包括手写数字、文字、算式、图形标注等）',
-                  '3. 如果是选择题/判断题，识别学生选择的选项（A/B/C/D 或 √/×）',
-                  '4. 如果是填空题，识别学生填写的答案',
-                  '5. 如果是解答题/计算题，识别学生完整的解答过程',
-                  '6. 无论是印刷体还是手写体，都要尽可能准确地识别',
-                  '',
-                  '输出格式（每道题用如下格式）：',
-                  '【题号】第X题',
-                  '【题型】选择题/填空题/判断题/解答题/计算题/其他',
-                  '【题目】完整的题目内容',
-                  '【学生答案】学生写下的答案（如果未作答则写"未作答"）',
-                  '---',
-                  '',
-                  '请逐题输出，不要遗漏任何题目。即使手写字迹不太清晰，也要尽力识别并标注。',
-                ].join('\n'),
-              },
-              { type: 'image_url', image_url: { url: dataUrl } },
-            ],
-          },
-        ],
-      }),
-    });
-
-    const payload = (await response.json().catch(() => null)) as {
+    const { response, payload } = await fetchJsonWithTimeout<{
       choices?: Array<{ message?: { content?: string } }>;
       error?: { message?: string };
-    } | null;
+    }>(
+      `${(env.GPT_API_BASE || 'https://geekspace.cloud/v1').replace(/\/+$/, '')}/chat/completions`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${env.GEEKSPACE_API_KEY || env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: env.OPENAI_MODEL || 'gpt-5.5',
+          temperature: 0.1,
+          messages: [
+            {
+              role: 'system',
+              content: '你是一个专业的试卷识别助手。你需要仔细识别试卷图片中的所有内容，包括印刷的题目和手写的答案。请严格按照要求输出。',
+            },
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: [
+                    '请仔细识别这张试卷图片（第' + (i + 1) + '页）中的所有内容。',
+                    '',
+                    '识别要求：',
+                    '1. 识别每道题的题号、题型、题目内容',
+                    '2. 识别学生在每道题上手写的答案（包括手写数字、文字、算式、图形标注等）',
+                    '3. 如果是选择题/判断题，识别学生选择的选项（A/B/C/D 或 √/×）',
+                    '4. 如果是填空题，识别学生填写的答案',
+                    '5. 如果是解答题/计算题，识别学生完整的解答过程',
+                    '6. 无论是印刷体还是手写体，都要尽可能准确地识别',
+                    '',
+                    '输出格式（每道题用如下格式）：',
+                    '【题号】第X题',
+                    '【题型】选择题/填空题/判断题/解答题/计算题/其他',
+                    '【题目】完整的题目内容',
+                    '【学生答案】学生写下的答案（如果未作答则写"未作答"）',
+                    '---',
+                    '',
+                    '请逐题输出，不要遗漏任何题目。即使手写字迹不太清晰，也要尽力识别并标注。',
+                  ].join('\n'),
+                },
+                { type: 'image_url', image_url: { url: dataUrl } },
+              ],
+            },
+          ],
+        }),
+      },
+      VISION_REQUEST_TIMEOUT_MS,
+      `GPT 试卷识别第 ${i + 1} 页等待超时，请压缩图片或减少页数后重试。`,
+    );
 
     if (!response.ok) {
       const errMsg = payload?.error?.message || response.statusText;
@@ -910,30 +915,33 @@ async function gradeWithDeepSeek(recognizedText: string, env: Env): Promise<Anal
     recognizedText.slice(0, MAX_ANALYSIS_TEXT_LENGTH),
   ].join('\n');
 
-  const response = await fetch('https://api.deepseek.com/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${env.DEEPSEEK_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: env.DEEPSEEK_MODEL || 'deepseek-chat',
-      temperature: 0.2,
-      response_format: { type: 'json_object' },
-      messages: [
-        {
-          role: 'system',
-          content: '你只输出符合要求的 JSON 对象。批改要严格、客观、准确，基于学生实际作答内容评分。',
-        },
-        { role: 'user', content: prompt },
-      ],
-    }),
-  });
-
-  const payload = (await response.json().catch(() => null)) as {
+  const { response, payload } = await fetchJsonWithTimeout<{
     choices?: Array<{ message?: { content?: string } }>;
     error?: { message?: string };
-  } | null;
+  }>(
+    'https://api.deepseek.com/chat/completions',
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.DEEPSEEK_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: env.DEEPSEEK_MODEL || 'deepseek-chat',
+        temperature: 0.2,
+        response_format: { type: 'json_object' },
+        messages: [
+          {
+            role: 'system',
+            content: '你只输出符合要求的 JSON 对象。批改要严格、客观、准确，基于学生实际作答内容评分。',
+          },
+          { role: 'user', content: prompt },
+        ],
+      }),
+    },
+    DEEPSEEK_REQUEST_TIMEOUT_MS,
+    'DeepSeek 批改等待超时，请减少单次批改页数或压缩图片后重试。',
+  );
 
   if (!response.ok) {
     throw new Error(`DeepSeek 批改失败：${payload?.error?.message || response.statusText}`);
@@ -1754,6 +1762,41 @@ function json(data: unknown, status: number, headers: HeadersInit): Response {
       'Content-Type': 'application/json; charset=utf-8',
     },
   });
+}
+
+async function fetchJsonWithTimeout<T>(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+  timeoutMessage: string,
+): Promise<{ response: Response; payload: T | null }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      ...init,
+      signal: controller.signal,
+    });
+    const payload = (await response.json().catch(() => null)) as T | null;
+    return { response, payload };
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw new Error(timeoutMessage);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function isAbortError(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'name' in error &&
+    (error as { name?: unknown }).name === 'AbortError'
+  );
 }
 
 function getErrorMessage(error: unknown, fallback: string): string {

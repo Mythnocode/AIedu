@@ -5557,6 +5557,7 @@
     API_BASE: resolveApiBase(),
     STORAGE_KEY: 'exam_analyzer_data',   // localStorage 存储键名
     API_TIMEOUT: 300000,                 // API 超时时间（毫秒）5 分钟
+    GRADE_API_TIMEOUT: 720000,           // 试卷批改包含图片识别和逐题评分，允许等待 12 分钟
     MAX_UPLOAD_FILES: 6,
     MAX_UPLOAD_FILE_SIZE: 4 * 1024 * 1024,
     MAX_UPLOAD_TOTAL_SIZE: 8 * 1024 * 1024,
@@ -5823,16 +5824,21 @@
 
   async function apiFetch(path, options = {}) {
     const headers = options.headers ? { ...options.headers } : {};
+    const timeoutMs = options.timeoutMs || CONFIG.API_TIMEOUT;
+    const fetchOptions = { ...options };
+    delete fetchOptions.timeoutMs;
+    delete fetchOptions.disableFallback;
+    delete fetchOptions.signal;
     let response;
     const candidates = options.disableFallback ? [CONFIG.API_BASE] : getApiBaseCandidates();
     let networkError;
     for (const base of candidates) {
       try {
         response = await fetch(`${base}${path}`, {
-          ...options,
+          ...fetchOptions,
           headers,
           credentials: 'include',
-          signal: options.signal || createTimeoutSignal(CONFIG.API_TIMEOUT),
+          signal: options.signal || createTimeoutSignal(timeoutMs),
         });
         if (base !== CONFIG.API_BASE) {
           setActiveApiBase(base);
@@ -6141,6 +6147,7 @@
       var data = await apiFetch('/api/papers/grade', {
         method: 'POST',
         body: formData,
+        timeoutMs: CONFIG.GRADE_API_TIMEOUT,
       });
 
       clearInterval(heartBeatTimer);
