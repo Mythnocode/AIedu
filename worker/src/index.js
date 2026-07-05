@@ -61,6 +61,14 @@ var index_default = {
         const user = await requireUser(request, env);
         return await handleCreateStudent(request, env, corsHeaders, user);
       }
+      if (url.pathname === "/api/students" && request.method === "DELETE") {
+        const user = await requireUser(request, env);
+        return await handleDeleteStudent(request, env, corsHeaders, user);
+      }
+      if (url.pathname === "/api/students" && request.method === "PUT") {
+        const user = await requireUser(request, env);
+        return await handleUpdateStudent(request, env, corsHeaders, user);
+      }
       return json({ message: "Not found" }, 404, corsHeaders);
     } catch (error) {
       if (error instanceof AuthError) {
@@ -696,6 +704,54 @@ async function handleCreateStudent(request, env, corsHeaders, user) {
     corsHeaders
   );
 }
+async function handleDeleteStudent(request, env, corsHeaders, user) {
+  const payload = await request.json().catch(() => null);
+  const dbId = typeof (payload == null ? void 0 : payload.dbId) === "string" ? payload.dbId.trim() : "";
+  if (!dbId) throw new HttpError(400, "\u7F3A\u5C11\u5B66\u751FID\u3002");
+  const result = await env.DB.prepare("DELETE FROM students WHERE id = ? AND user_id = ?").bind(dbId, user.id).run();
+  if (result.meta.changes === 0) {
+    throw new HttpError(404, "\u672A\u627E\u5230\u8BE5\u5B66\u751F\uFF0C\u53EF\u80FD\u5DF2\u88AB\u5220\u9664\u3002");
+  }
+  await logUsage(env, user.id, "delete_student", null, JSON.stringify({ dbId }));
+  return json({ ok: true }, 200, corsHeaders);
+}
+async function handleUpdateStudent(request, env, corsHeaders, user) {
+  const payload = await request.json().catch(() => null);
+  const dbId = typeof (payload == null ? void 0 : payload.dbId) === "string" ? payload.dbId.trim() : "";
+  if (!dbId) throw new HttpError(400, "\u7F3A\u5C11\u5B66\u751FID\u3002");
+  const name = normalizeStudentText(payload == null ? void 0 : payload.name, 40);
+  const className = normalizeStudentText(payload == null ? void 0 : payload.class, 60);
+  const avgRate = clamp(numberOrDefault(payload == null ? void 0 : payload.avgRate, 60), 0, 100);
+  const totalQuestions = Math.max(0, Math.round(numberOrDefault(payload == null ? void 0 : payload.totalQuestions, 0)));
+  const kpData = normalizeKpData(payload == null ? void 0 : payload.kpData, avgRate);
+  if (!name) throw new HttpError(400, "\u8BF7\u8F93\u5165\u5B66\u751F\u59D3\u540D\u3002");
+  if (!className) throw new HttpError(400, "\u8BF7\u9009\u62E9\u6216\u8F93\u5165\u73ED\u7EA7\u3002");
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const result = await env.DB.prepare(
+    [
+      "UPDATE students",
+      "SET name = ?, class_name = ?, avg_rate = ?, total_questions = ?, kp_data = ?, updated_at = ?",
+      "WHERE id = ? AND user_id = ?"
+    ].join(" ")
+  ).bind(name, className, avgRate, totalQuestions, JSON.stringify(kpData), now, dbId, user.id).run();
+  if (result.meta.changes === 0) {
+    throw new HttpError(404, "\u672A\u627E\u5230\u8BE5\u5B66\u751F\uFF0C\u53EF\u80FD\u5DF2\u88AB\u5220\u9664\u3002");
+  }
+  await logUsage(env, user.id, "update_student", null, JSON.stringify({ dbId, studentNo: payload == null ? void 0 : payload.id }));
+  return json({
+    ok: true,
+    student: {
+      dbId,
+      id: (payload == null ? void 0 : payload.id) || "",
+      name,
+      class: className,
+      avgRate,
+      totalQuestions,
+      kpData,
+      updatedAt: now
+    }
+  }, 200, corsHeaders);
+}
 async function savePaperResult(env, user, input) {
   const now = (/* @__PURE__ */ new Date()).toISOString();
   const paperId = crypto.randomUUID();
@@ -1095,7 +1151,7 @@ function getCorsHeaders(env, request) {
   const allowOrigin = allowAny && origin ? origin : origin && configuredOrigins.includes(origin) ? origin : configuredOrigins[0] || "*";
   return {
     "Access-Control-Allow-Origin": allowOrigin,
-    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+    "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Allow-Credentials": "true",
     Vary: "Origin"

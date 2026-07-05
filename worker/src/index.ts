@@ -157,6 +157,16 @@ export default {
         return await handleCreateStudent(request, env, corsHeaders, user);
       }
 
+      if (url.pathname === '/api/students' && request.method === 'DELETE') {
+        const user = await requireUser(request, env);
+        return await handleDeleteStudent(request, env, corsHeaders, user);
+      }
+
+      if (url.pathname === '/api/students' && request.method === 'PUT') {
+        const user = await requireUser(request, env);
+        return await handleUpdateStudent(request, env, corsHeaders, user);
+      }
+
       return json({ message: 'Not found' }, 404, corsHeaders);
     } catch (error) {
       if (error instanceof AuthError) {
@@ -1213,6 +1223,82 @@ async function handleCreateStudent(
   );
 }
 
+async function handleDeleteStudent(
+  request: Request,
+  env: Env,
+  corsHeaders: HeadersInit,
+  user: AuthUser,
+): Promise<Response> {
+  const payload = (await request.json().catch(() => null)) as { dbId?: unknown } | null;
+  const dbId = typeof payload?.dbId === 'string' ? payload.dbId.trim() : '';
+  if (!dbId) throw new HttpError(400, '缺少学生ID。');
+
+  const result = await env.DB.prepare('DELETE FROM students WHERE id = ? AND user_id = ?')
+    .bind(dbId, user.id)
+    .run();
+
+  if (result.meta.changes === 0) {
+    throw new HttpError(404, '未找到该学生，可能已被删除。');
+  }
+
+  await logUsage(env, user.id, 'delete_student', null, JSON.stringify({ dbId }));
+  return json({ ok: true }, 200, corsHeaders);
+}
+
+async function handleUpdateStudent(
+  request: Request,
+  env: Env,
+  corsHeaders: HeadersInit,
+  user: AuthUser,
+): Promise<Response> {
+  const payload = (await request.json().catch(() => null)) as (StudentPayload & { dbId?: unknown }) | null;
+  const dbId = typeof payload?.dbId === 'string' ? payload.dbId.trim() : '';
+  if (!dbId) throw new HttpError(400, '缺少学生ID。');
+
+  const name = normalizeStudentText(payload?.name, 40);
+  const className = normalizeStudentText(payload?.class, 60);
+  const avgRate = clamp(numberOrDefault(payload?.avgRate, 60), 0, 100);
+  const totalQuestions = Math.max(0, Math.round(numberOrDefault(payload?.totalQuestions, 0)));
+  const kpData = normalizeKpData(payload?.kpData, avgRate);
+
+  if (!name) throw new HttpError(400, '请输入学生姓名。');
+  if (!className) throw new HttpError(400, '请选择或输入班级。');
+
+  const now = new Date().toISOString();
+  const result = await env.DB.prepare(
+    [
+      'UPDATE students',
+      'SET name = ?, class_name = ?, avg_rate = ?, total_questions = ?, kp_data = ?, updated_at = ?',
+      'WHERE id = ? AND user_id = ?',
+    ].join(' '),
+  )
+    .bind(name, className, avgRate, totalQuestions, JSON.stringify(kpData), now, dbId, user.id)
+    .run();
+
+  if (result.meta.changes === 0) {
+    throw new HttpError(404, '未找到该学生，可能已被删除。');
+  }
+
+  await logUsage(env, user.id, 'update_student', null, JSON.stringify({ dbId, studentNo: payload?.id }));
+  return json(
+    {
+      ok: true,
+      student: {
+        dbId,
+        id: payload?.id || '',
+        name,
+        class: className,
+        avgRate,
+        totalQuestions,
+        kpData,
+        updatedAt: now,
+      },
+    },
+    200,
+    corsHeaders,
+  );
+}
+
 async function savePaperResult(
   env: Env,
   user: AuthUser,
@@ -1755,7 +1841,7 @@ function getCorsHeaders(env: Env, request: Request): HeadersInit {
 
   return {
     'Access-Control-Allow-Origin': allowOrigin,
-    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Credentials': 'true',
     Vary: 'Origin',

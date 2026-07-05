@@ -1979,6 +1979,54 @@
       white-space: nowrap;
     }
 
+    /* 学生卡片操作按钮区 */
+    .student-card-actions {
+      display: flex;
+      gap: 8px;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+    .student-card-action-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--color-border);
+      background: var(--color-bg-white);
+      color: var(--color-text-body);
+      font-size: 13px;
+      font-family: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      white-space: nowrap;
+    }
+    .student-card-action-btn svg {
+      width: 15px;
+      height: 15px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+    .student-card-action-btn:hover {
+      border-color: var(--color-primary);
+      color: var(--color-primary);
+      background: var(--color-primary-lighter);
+    }
+    .student-card-action-btn--danger {
+      color: var(--color-error);
+      border-color: var(--color-error-light);
+    }
+    .student-card-action-btn--danger:hover {
+      border-color: var(--color-error);
+      color: #fff;
+      background: var(--color-error);
+    }
+
     .question-difficulty-tag {
       padding: 2px 8px;
       border-radius: 4px;
@@ -3351,6 +3399,15 @@
     .feat-btn--success:hover {
       background: #059669;
       transform: translateY(-1px);
+    }
+    .feat-btn--danger {
+      background: var(--color-error);
+      color: white;
+    }
+    .feat-btn--danger:hover {
+      background: #DC2626;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
     }
 
     /* ===== 试卷自动批改 ===== */
@@ -11816,20 +11873,21 @@
       card.className = 'question-card';
       card.style.animationDelay = `${Math.min(index * 0.05, 0.5)}s`;
       const rateColor = getScoreRateColor(s.avgRate);
+      const safeName = escapeHtml(s.name);
 
       // 知识点小标签
       const kpTags = Object.entries(s.kpData).map(([kp, rate]) => {
         const c = getScoreRateColor(rate);
-        return `<span class="question-kp-tag" style="color:${c};font-weight:600;">${kp} ${rate}%</span>`;
+        return `<span class="question-kp-tag" style="color:${c};font-weight:600;">${escapeHtml(kp)} ${rate}%</span>`;
       }).join('');
 
       card.innerHTML = `
         <div class="question-card-header">
           <span class="question-type-tag" style="background:var(--color-primary-light);color:var(--color-primary);">
-            ${s.class}
+            ${escapeHtml(s.class)}
           </span>
-          <span class="priority-kp-name" style="font-size:16px;">${s.name}</span>
-          <span style="font-size:var(--font-size-sm);color:var(--color-text-muted);">学号：${s.id}</span>
+          <span class="priority-kp-name" style="font-size:16px;">${safeName}</span>
+          <span style="font-size:var(--font-size-sm);color:var(--color-text-muted);">学号：${escapeHtml(s.id)}</span>
           <span class="question-score">做题量：<strong>${s.totalQuestions}</strong>道</span>
           <span class="question-rate">
             平均得分率：<strong style="color:${rateColor}">${s.avgRate}%</strong>
@@ -11837,6 +11895,16 @@
               <div class="question-rate-fill" style="width:${s.avgRate}%;background:${rateColor};"></div>
             </div>
           </span>
+          <div class="student-card-actions">
+            <button class="student-card-action-btn" onclick="editStudent('${s.dbId}')" title="编辑学生信息">
+              <svg viewBox="0 0 20 20"><path d="M14 4 L16 6 L8 14 L4 15 L5 11 Z"/><path d="M13 5 L15 7"/></svg>
+              编辑
+            </button>
+            <button class="student-card-action-btn student-card-action-btn--danger" onclick="deleteStudent('${s.dbId}')" title="删除学生">
+              <svg viewBox="0 0 20 20"><path d="M5 6 L15 6 M8 6 L8 4 L12 4 L12 6 M6 6 L7 16 L13 16 L14 6 M9 9 L9 13 M11 9 L11 13"/></svg>
+              删除
+            </button>
+          </div>
         </div>
         <div class="question-card-header" style="margin-bottom:0;">
           ${kpTags}
@@ -11844,6 +11912,234 @@
       `;
       container.appendChild(card);
     });
+  }
+
+  /**
+   * 删除学生（带确认弹窗）
+   */
+  function deleteStudent(dbId) {
+    var student = DEMO_STUDENTS.find(function(s) { return s.dbId === dbId; });
+    var name = student ? student.name : '该学生';
+    var body = '';
+    body += '<div style="text-align:center;padding:12px 0 8px;">';
+    body += '<div style="width:56px;height:56px;margin:0 auto 16px;border-radius:50%;background:var(--color-error-light);display:flex;align-items:center;justify-content:center;">';
+    body += '<svg viewBox="0 0 24 24" style="width:28px;height:28px;fill:none;stroke:var(--color-error);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><path d="M5 6 L19 6 M9 6 L9 4 L15 4 L15 6 M6 6 L7 20 L17 20 L18 6 M10 10 L10 16 M14 10 L14 16"/></svg>';
+    body += '</div>';
+    body += '<div style="font-size:18px;font-weight:700;color:var(--color-text-title);margin-bottom:8px;">确认删除学生</div>';
+    body += '<div style="font-size:14px;color:var(--color-text-body);line-height:1.6;">即将删除学生 <strong style="color:var(--color-text-title);">' + escapeHtml(name) + '</strong></div>';
+    body += '<div style="font-size:13px;color:var(--color-text-muted);margin-top:4px;">删除后不可恢复，该学生的所有数据将永久移除</div>';
+    body += '</div>';
+
+    body += '<div class="feature-footer" style="border-top:none;padding:20px 0 0;justify-content:center;gap:12px;">';
+    body += '<button class="feat-btn feat-btn--ghost" onclick="closeFeature()">取消</button>';
+    body += '<button class="feat-btn feat-btn--danger" onclick="confirmDeleteStudent(\'' + dbId + '\')">确认删除</button>';
+    body += '</div>';
+
+    openFeature(
+      '<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><path d="M5 6 L19 6 M9 6 L9 4 L15 4 L15 6 M6 6 L7 20 L17 20 L18 6"/></svg>删除学生',
+      body
+    );
+  }
+
+  /**
+   * 确认删除学生（调用API）
+   */
+  async function confirmDeleteStudent(dbId) {
+    if (!state.user) {
+      closeFeature();
+      openAuthModal('login');
+      showToast('请先登录后再操作', 'warning');
+      return;
+    }
+    if (!state.apiAvailable) {
+      showToast('后端服务未连接，暂时无法删除', 'error', 4000);
+      return;
+    }
+
+    var student = DEMO_STUDENTS.find(function(s) { return s.dbId === dbId; });
+    var name = student ? student.name : '';
+
+    try {
+      await apiFetch('/api/students', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dbId: dbId }),
+      });
+
+      // 从本地数组移除
+      DEMO_STUDENTS = DEMO_STUDENTS.filter(function(s) { return s.dbId !== dbId; });
+
+      closeFeature();
+      renderStudentList();
+      updateUI();
+      showToast('已删除学生：' + name, 'success');
+    } catch (error) {
+      showToast('删除失败：' + error.message, 'error', 5000);
+    }
+  }
+
+  /**
+   * 编辑学生信息（打开预填表单）
+   */
+  function editStudent(dbId) {
+    var student = DEMO_STUDENTS.find(function(s) { return s.dbId === dbId; });
+    if (!student) {
+      showToast('未找到该学生信息', 'error');
+      return;
+    }
+
+    var body = '';
+    body += '<div style="font-size:14px;color:var(--color-text-muted);margin-bottom:20px;">修改学生信息，保存后即时更新</div>';
+
+    // 姓名
+    body += '<div class="add-student-field">';
+    body += '<label class="add-student-label">姓名 <span style="color:#EF4444;">*</span></label>';
+    body += '<input type="text" class="add-student-input" id="editStudentName" placeholder="请输入学生姓名" maxlength="10" value="' + escapeHtml(student.name) + '" />';
+    body += '</div>';
+
+    // 学号（不可修改）
+    body += '<div class="add-student-field">';
+    body += '<label class="add-student-label">学号</label>';
+    body += '<input type="text" class="add-student-input" id="editStudentId" value="' + escapeHtml(student.id) + '" disabled style="opacity:0.6;cursor:not-allowed;" />';
+    body += '<div style="font-size:12px;color:var(--color-text-muted);margin-top:4px;">学号不可修改</div>';
+    body += '</div>';
+
+    // 班级
+    body += '<div class="add-student-field">';
+    body += '<label class="add-student-label">班级 <span style="color:#EF4444;">*</span></label>';
+    var classes = getAllClasses();
+    body += '<select class="add-student-input" id="editStudentClass">';
+    classes.forEach(function(c) {
+      body += '<option value="' + escapeHtml(c) + '"' + (c === student.class ? ' selected' : '') + '>' + escapeHtml(c) + '</option>';
+    });
+    body += '<option value="new">+ 新建班级...</option>';
+    body += '</select>';
+    body += '<input type="text" class="add-student-input" id="editStudentClassCustom" placeholder="输入新班级名称" style="display:none;margin-top:8px;" />';
+    body += '</div>';
+
+    // 平均得分率
+    body += '<div class="add-student-field">';
+    body += '<label class="add-student-label">平均得分率</label>';
+    body += '<input type="number" class="add-student-input" id="editStudentAvgRate" value="' + student.avgRate + '" min="0" max="100" />';
+    body += '</div>';
+
+    // 知识点数据
+    body += '<div class="add-student-field">';
+    body += '<label class="add-student-label">知识点掌握情况</label>';
+    var allKps = getAllStudentKps();
+    if (allKps.length > 0) {
+      allKps.forEach(function(kp) {
+        var val = student.kpData && student.kpData[kp] !== undefined ? student.kpData[kp] : '';
+        body += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">';
+        body += '<span style="flex-shrink:0;width:100px;font-size:13px;">' + escapeHtml(kp) + '</span>';
+        body += '<input type="number" class="add-student-input" id="editStudentKp_' + kp.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '') + '" value="' + val + '" min="0" max="100" style="flex:1;" />';
+        body += '<span style="font-size:13px;color:var(--color-text-muted);">%</span>';
+        body += '</div>';
+      });
+    } else {
+      body += '<div style="font-size:13px;color:var(--color-text-muted);">暂无知识点数据，上传试卷分析后自动生成</div>';
+    }
+    body += '</div>';
+
+    body += '<div class="feature-footer" style="border-top:none;padding:20px 0 0;justify-content:flex-end;">';
+    body += '<button class="feat-btn feat-btn--ghost" onclick="closeFeature()">取消</button>';
+    body += '<button class="feat-btn feat-btn--primary" onclick="submitEditStudent(\'' + dbId + '\')">保存修改</button>';
+    body += '</div>';
+
+    openFeature(
+      '<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><path d="M14 4 L16 6 L8 14 L4 15 L5 11 Z"/><path d="M13 5 L15 7"/></svg>编辑学生',
+      body
+    );
+
+    // 班级选择变化时显示/隐藏自定义输入框
+    setTimeout(function() {
+      var classSelect = document.getElementById('editStudentClass');
+      if (classSelect) {
+        classSelect.addEventListener('change', function() {
+          var customInput = document.getElementById('editStudentClassCustom');
+          if (customInput) {
+            customInput.style.display = (this.value === 'new') ? 'block' : 'none';
+          }
+        });
+      }
+    }, 100);
+  }
+
+  /**
+   * 提交学生修改（调用API）
+   */
+  async function submitEditStudent(dbId) {
+    if (!state.user) {
+      openAuthModal('login');
+      showToast('请先登录后再操作', 'warning');
+      return;
+    }
+    if (!state.apiAvailable) {
+      showToast('后端服务未连接，暂时无法保存', 'error', 4000);
+      return;
+    }
+
+    var student = DEMO_STUDENTS.find(function(s) { return s.dbId === dbId; });
+    if (!student) {
+      showToast('未找到该学生信息', 'error');
+      return;
+    }
+
+    var name = document.getElementById('editStudentName').value.trim();
+    var classVal = document.getElementById('editStudentClass').value;
+    var customClass = document.getElementById('editStudentClassCustom');
+    if (classVal === 'new' && customClass) {
+      classVal = customClass.value.trim();
+    }
+    var avgRateInput = document.getElementById('editStudentAvgRate').value;
+
+    if (!name) { showToast('请输入学生姓名', 'warning'); return; }
+    if (!classVal) { showToast('请选择或输入班级', 'warning'); return; }
+
+    var avgRate = avgRateInput ? parseInt(avgRateInput) : 60;
+    avgRate = Math.max(0, Math.min(100, avgRate));
+
+    // 知识点数据
+    var kpData = {};
+    var allKps = getAllStudentKps();
+    allKps.forEach(function(kp) {
+      var inputEl = document.getElementById('editStudentKp_' + kp.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, ''));
+      if (inputEl && inputEl.value !== '') {
+        kpData[kp] = Math.max(0, Math.min(100, parseInt(inputEl.value)));
+      } else if (student.kpData && student.kpData[kp] !== undefined) {
+        kpData[kp] = student.kpData[kp];
+      }
+    });
+
+    var payload = {
+      dbId: dbId,
+      id: student.id,
+      name: name,
+      class: classVal,
+      avgRate: avgRate,
+      totalQuestions: student.totalQuestions,
+      kpData: kpData
+    };
+
+    try {
+      const data = await apiFetch('/api/students', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      // 更新本地数据
+      var updated = normalizeStudent(data.student || payload);
+      var idx = DEMO_STUDENTS.findIndex(function(s) { return s.dbId === dbId; });
+      if (idx >= 0) DEMO_STUDENTS[idx] = updated;
+
+      closeFeature();
+      renderStudentList();
+      updateUI();
+      showToast('已更新学生信息：' + name, 'success');
+    } catch (error) {
+      showToast('保存失败：' + error.message, 'error', 5000);
+    }
   }
 
 
