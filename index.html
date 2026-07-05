@@ -6125,12 +6125,25 @@
 
       updateProgress(50, 'AI正在逐题批改...', 'DeepSeek 评估答案正确性');
 
+      // 心跳提示：每15秒更新等待提示，让用户知道系统还在工作
+      var heartBeatMsgs = [
+        'AI正在逐题批改...',
+        '还在努力批改中，请稍候...',
+        '题目较多，正在仔细批改...',
+        '即将完成，请再等一下...',
+      ];
+      var heartBeatIdx = 0;
+      var heartBeatTimer = setInterval(function() {
+        heartBeatIdx = Math.min(heartBeatIdx + 1, heartBeatMsgs.length - 1);
+        updateProgress(50 + heartBeatIdx * 5, heartBeatMsgs[heartBeatIdx], 'DeepSeek 评估答案正确性');
+      }, 15000);
+
       var data = await apiFetch('/api/papers/grade', {
         method: 'POST',
         body: formData,
       });
 
-      updateProgress(90, '批改完成，正在更新结果...', '');
+      clearInterval(heartBeatTimer);
 
       var gradedQuestions = normalizeQuestions(
         data.result && data.result.questions ? data.result.questions : []
@@ -6142,17 +6155,19 @@
         saveQuestions();
         updateUI();
 
-        // 逐题动画展示批改结果
-        animateGradeResults(gradedQuestions, btn);
+        // 等待逐题动画完成后才隐藏进度条
+        await animateGradeResults(gradedQuestions, btn);
 
         updateProgress(100, '批改完成！', '共批改 ' + gradedQuestions.length + ' 道题');
         setTimeout(function() { hideProgress(); }, 1500);
       } else {
+        clearInterval(heartBeatTimer);
         hideProgress();
         showToast('未能识别出试卷内容，请确保图片清晰且包含题目和答案', 'warning', 5000);
         if (btn) { btn.disabled = false; btn.textContent = '一键批改'; }
       }
     } catch (e) {
+      clearInterval(heartBeatTimer);
       hideProgress();
       var errMsg = (e && e.message) ? e.message : '批改失败';
       showToast('批改失败：' + errMsg, 'error', 5000);
@@ -6216,40 +6231,42 @@
    * 逐题动画展示批改结果
    */
   function animateGradeResults(questions, btn) {
-    var i = 0;
+    return new Promise(function(resolve) {
+      var i = 0;
 
-    function gradeNext() {
-      if (i >= questions.length) {
-        if (btn) { btn.disabled = false; btn.textContent = '批改完成'; btn.style.background = 'var(--color-success)'; }
+      function gradeNext() {
+        if (i >= questions.length) {
+          if (btn) { btn.disabled = false; btn.textContent = '批改完成'; btn.style.background = 'var(--color-success)'; }
 
-        // 更新统计区
-        var totalScore = 0, totalMax = 0;
-        var correctCount = 0, wrongCount = 0, unansweredCount = 0;
-        questions.forEach(function(q) {
-          totalMax += q.score || 0;
-          var earned = Math.round((q.score || 0) * (q.scoreRate || 0) / 100);
-          totalScore += earned;
-          var rate = q.scoreRate || 0;
-          if (rate === 0) { unansweredCount++; }
-          else if (rate >= 60) { correctCount++; }
-          else { wrongCount++; }
-        });
-        var avgRate = questions.length > 0 ? Math.round(questions.reduce(function(s, q) { return s + (q.scoreRate || 0); }, 0) / questions.length) : 0;
+          // 更新统计区
+          var totalScore = 0, totalMax = 0;
+          var correctCount = 0, wrongCount = 0, unansweredCount = 0;
+          questions.forEach(function(q) {
+            totalMax += q.score || 0;
+            var earned = Math.round((q.score || 0) * (q.scoreRate || 0) / 100);
+            totalScore += earned;
+            var rate = q.scoreRate || 0;
+            if (rate === 0) { unansweredCount++; }
+            else if (rate >= 60) { correctCount++; }
+            else { wrongCount++; }
+          });
+          var avgRate = questions.length > 0 ? Math.round(questions.reduce(function(s, q) { return s + (q.scoreRate || 0); }, 0) / questions.length) : 0;
 
-        // 更新顶部统计
-        var summaryCards = document.querySelectorAll('.grade-summary-card');
-        if (summaryCards.length >= 5) {
-          summaryCards[0].querySelector('.grade-summary-value').textContent = totalScore;
-          summaryCards[0].querySelector('.grade-summary-label').textContent = '总得分 / ' + totalMax;
-          summaryCards[1].querySelector('.grade-summary-value').textContent = correctCount;
-          summaryCards[2].querySelector('.grade-summary-value').textContent = wrongCount;
-          summaryCards[3].querySelector('.grade-summary-value').textContent = unansweredCount;
-          summaryCards[4].querySelector('.grade-summary-value').textContent = avgRate + '%';
+          // 更新顶部统计
+          var summaryCards = document.querySelectorAll('.grade-summary-card');
+          if (summaryCards.length >= 5) {
+            summaryCards[0].querySelector('.grade-summary-value').textContent = totalScore;
+            summaryCards[0].querySelector('.grade-summary-label').textContent = '总得分 / ' + totalMax;
+            summaryCards[1].querySelector('.grade-summary-value').textContent = correctCount;
+            summaryCards[2].querySelector('.grade-summary-value').textContent = wrongCount;
+            summaryCards[3].querySelector('.grade-summary-value').textContent = unansweredCount;
+            summaryCards[4].querySelector('.grade-summary-value').textContent = avgRate + '%';
+          }
+
+          showToast('批改完成！正确 ' + correctCount + ' 题，错误 ' + wrongCount + ' 题', 'success', 4000);
+          resolve();
+          return;
         }
-
-        showToast('批改完成！正确 ' + correctCount + ' 题，错误 ' + wrongCount + ' 题', 'success', 4000);
-        return;
-      }
 
       var q = questions[i];
       var earnedScore = Math.round((q.score || 0) * (q.scoreRate || 0) / 100);
@@ -6283,6 +6300,7 @@
     }
 
     gradeNext();
+    });
   }
 
   /**
