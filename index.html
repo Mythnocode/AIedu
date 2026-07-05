@@ -496,72 +496,94 @@
       display: none;
     }
 
-    /* 学情看板空状态提示 */
-    .home-empty-state {
+    /* 学情看板引导提示条 */
+    .home-guide-hint {
       display: flex;
-      flex-direction: column;
       align-items: center;
-      justify-content: center;
-      padding: 60px 20px 80px;
-      text-align: center;
-      animation: fadeInUp 0.4s ease;
-    }
-    .home-empty-icon {
+      gap: 12px;
+      padding: 16px 20px;
       margin-bottom: 20px;
-      opacity: 0.8;
-    }
-    .home-empty-title {
-      font-size: 20px;
-      font-weight: 700;
-      color: #475569;
-      margin-bottom: 10px;
-    }
-    .home-empty-desc {
-      font-size: 14px;
-      color: #94A3B8;
-      line-height: 1.6;
-      max-width: 420px;
-      margin-bottom: 28px;
-    }
-    .home-empty-actions {
-      display: flex;
-      gap: 16px;
+      background: linear-gradient(135deg, #EFF6FF 0%, #F0FDFA 100%);
+      border: 1px solid #BFDBFE;
+      border-radius: 14px;
+      animation: fadeInUp 0.4s ease;
       flex-wrap: wrap;
-      justify-content: center;
     }
-    .home-empty-btn {
-      display: inline-flex;
+    .home-guide-step {
+      display: flex;
       align-items: center;
-      padding: 10px 24px;
-      border-radius: 12px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      border: none;
-      transition: all 0.2s;
+      gap: 10px;
+      flex: 1;
+      min-width: 200px;
     }
-    .home-empty-btn--primary {
+    .home-guide-step-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
       background: #2563EB;
       color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
     }
-    .home-empty-btn--primary:hover {
+    .home-guide-step-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .home-guide-step-text strong {
+      font-size: 14px;
+      color: #1E40AF;
+      font-weight: 600;
+    }
+    .home-guide-step-text span {
+      font-size: 12px;
+      color: #64748B;
+    }
+    .home-guide-step button {
+      padding: 6px 14px;
+      border-radius: 8px;
+      background: #2563EB;
+      color: #fff;
+      border: none;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .home-guide-step button:hover {
       background: #1D4ED8;
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
     }
-    .home-empty-btn--secondary {
-      background: #EFF6FF;
-      color: #2563EB;
-      border: 1px solid #BFDBFE;
+    .home-guide-step.done .home-guide-step-num {
+      background: #10B981;
     }
-    .home-empty-btn--secondary:hover {
-      background: #DBEAFE;
+    .home-guide-step.done .home-guide-step-text strong {
+      color: #059669;
     }
-    body.mobile-ua .home-empty-state {
-      padding: 40px 16px 60px;
+    .home-guide-step.done button {
+      display: none;
     }
-    body.mobile-ua .home-empty-title {
+    .home-guide-arrow {
+      color: #94A3B8;
       font-size: 18px;
+      flex-shrink: 0;
+    }
+    body.mobile-ua .home-guide-hint {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+      padding: 12px 14px;
+    }
+    body.mobile-ua .home-guide-arrow {
+      display: none;
+    }
+    body.mobile-ua .home-guide-step {
+      min-width: auto;
     }
 
     /* 首页统计气泡（第一层） */
@@ -4648,36 +4670,32 @@
 
       <div class="home-content">
 
-        <!-- ===== 空状态提示（无学生数据时显示） ===== -->
-        <div class="home-empty-state" id="homeEmptyState" style="display:none;">
-          <div class="home-empty-icon">
-            <svg viewBox="0 0 64 64" width="72" height="72">
-              <circle cx="22" cy="24" r="8" fill="none" stroke="#CBD5E1" stroke-width="2.5"/>
-              <path d="M8 52 Q8 40 22 40 Q36 40 36 52" fill="none" stroke="#CBD5E1" stroke-width="2.5" stroke-linecap="round"/>
-              <circle cx="44" cy="26" r="6" fill="none" stroke="#E2E8F0" stroke-width="2"/>
-              <path d="M38 52 Q38 44 44 44 Q54 44 54 52" fill="none" stroke="#E2E8F0" stroke-width="2" stroke-linecap="round"/>
-            </svg>
+        <!-- ===== 引导提示（无数据时显示） ===== -->
+        <div class="home-guide-hint" id="homeGuideHint" style="display:none;">
+          <div class="home-guide-step" id="guideStep1">
+            <div class="home-guide-step-num">1</div>
+            <div class="home-guide-step-text">
+              <strong>添加学生</strong>
+              <span>在「学生管理」中录入学生信息</span>
+            </div>
+            <button onclick="switchView('students')">去添加</button>
           </div>
-          <div class="home-empty-title">暂无学情数据</div>
-          <div class="home-empty-desc">请先在「学生管理」中添加学生信息，并上传试卷进行分析后，学情看板将自动展示班级数据</div>
-          <div class="home-empty-actions">
-            <button class="home-empty-btn home-empty-btn--primary" onclick="switchView('students')">
-              <svg viewBox="0 0 20 20" width="16" height="16" style="vertical-align:middle;margin-right:4px;">
-                <circle cx="9" cy="7" r="3"/>
-                <path d="M3 17 Q3 12 9 12 Q15 12 15 17" fill="none" stroke="currentColor" stroke-width="1.5"/>
-                <line x1="15" y1="5" x2="15" y2="11" stroke="currentColor" stroke-width="1.5"/>
-                <line x1="12" y1="8" x2="18" y2="8" stroke="currentColor" stroke-width="1.5"/>
-              </svg>
-              去添加学生
-            </button>
-            <button class="home-empty-btn home-empty-btn--secondary" onclick="switchView('search')">
-              <svg viewBox="0 0 20 20" width="16" height="16" style="vertical-align:middle;margin-right:4px;">
-                <path d="M5 3 L13 3 L17 7 L17 17 L5 17 Z" fill="none" stroke="currentColor" stroke-width="1.5"/>
-                <line x1="8" y1="10" x2="14" y2="10" stroke="currentColor" stroke-width="1.5"/>
-                <line x1="8" y1="13" x2="12" y2="13" stroke="currentColor" stroke-width="1.5"/>
-              </svg>
-              去上传试卷
-            </button>
+          <div class="home-guide-arrow">→</div>
+          <div class="home-guide-step" id="guideStep2">
+            <div class="home-guide-step-num">2</div>
+            <div class="home-guide-step-text">
+              <strong>上传试卷分析</strong>
+              <span>在「试卷分析」中上传试卷并智能批改</span>
+            </div>
+            <button onclick="switchView('search')">去上传</button>
+          </div>
+          <div class="home-guide-arrow">→</div>
+          <div class="home-guide-step" id="guideStep3">
+            <div class="home-guide-step-num">3</div>
+            <div class="home-guide-step-text">
+              <strong>查看学情看板</strong>
+              <span>完成以上步骤后，此处自动展示数据</span>
+            </div>
           </div>
         </div>
 
@@ -6074,8 +6092,9 @@
       // 智能阅卷页面已改为功能气泡卡片，无需渲染图表
     }
 
-    // 如果切换到首页视图，渲染首页图表
+    // 如果切换到首页视图，更新气泡数据和引导提示，然后渲染图表
     if (viewName === 'home') {
+      updateUI();
       setTimeout(() => renderHomeCharts(), 100);
     }
 
@@ -6321,7 +6340,15 @@
         await animateGradeResults(gradedQuestions, btn);
 
         updateProgress(100, '批改完成！', '共批改 ' + gradedQuestions.length + ' 道题');
-        setTimeout(function() { hideProgress(); }, 1500);
+        setTimeout(function() {
+          hideProgress();
+          // 根据是否已有学生给出不同引导
+          if (DEMO_STUDENTS.length === 0) {
+            showToast('批改完成！下一步请在「学生管理」中添加学生，学情看板将展示完整数据', 'success', 4000);
+          } else {
+            showToast('批改完成！学情看板已更新，点击「学情看板」查看数据分析', 'success', 4000);
+          }
+        }, 1500);
       } else {
         clearInterval(heartBeatTimer);
         hideProgress();
@@ -10211,8 +10238,8 @@
   }
 
   function getDashboardAverageScore() {
-    // 必须有学生数据才计算平均分
-    if (DEMO_STUDENTS.length === 0) return 0;
+    // 必须有学生且有试卷分析才计算平均分
+    if (DEMO_STUDENTS.length === 0 || state.questions.length === 0) return 0;
     var total = DEMO_STUDENTS.reduce(function(sum, student) {
       return sum + parseFloat(student.avgRate || 0);
     }, 0);
@@ -10251,8 +10278,8 @@
 
   function getDashboardScoreBands() {
     var counts = [0, 0, 0, 0, 0];
-    // 必须有学生数据才统计分数段
-    if (DEMO_STUDENTS.length === 0) return counts;
+    // 必须有学生且有试卷分析才统计分数段
+    if (DEMO_STUDENTS.length === 0 || state.questions.length === 0) return counts;
 
     DEMO_STUDENTS.forEach(function(student) {
       var score = parseFloat(student.avgRate || 0);
@@ -10268,8 +10295,8 @@
   function getDashboardKnowledgeAverages() {
     var kpMap = {};
 
-    // 必须有学生数据才计算知识点掌握度
-    if (DEMO_STUDENTS.length === 0) {
+    // 必须有学生且有试卷分析才计算知识点掌握度
+    if (DEMO_STUDENTS.length === 0 || state.questions.length === 0) {
       return { names: [], rates: [] };
     }
 
@@ -11291,15 +11318,46 @@
     // 更新导航栏角标
     updateStats();
 
-    // 更新首页气泡数据（账号学生 + 题库动态计算）
+    // 判断数据状态：是否有学生、是否有试卷分析
+    var hasStudents = DEMO_STUDENTS.length > 0;
+    var hasQuestions = state.questions.length > 0;
+    var hasAnalysis = hasQuestions && state.questions.some(function(q) { return q.graded || parseFloat(q.scoreRate || 0) > 0; });
+
+    // 更新引导提示条
+    var guideHint = document.getElementById('homeGuideHint');
+    if (guideHint) {
+      var step1 = document.getElementById('guideStep1');
+      var step2 = document.getElementById('guideStep2');
+      var step3 = document.getElementById('guideStep3');
+      if (!hasStudents && !hasAnalysis) {
+        // 无学生无分析：显示完整引导
+        guideHint.style.display = 'flex';
+        if (step1) step1.classList.remove('done');
+        if (step2) step2.classList.remove('done');
+        if (step3) step3.classList.remove('done');
+      } else if (hasStudents && !hasAnalysis) {
+        // 有学生但没分析：显示步骤2、3
+        guideHint.style.display = 'flex';
+        if (step1) step1.classList.add('done');
+        if (step2) step2.classList.remove('done');
+        if (step3) step3.classList.remove('done');
+      } else {
+        // 都有了：隐藏引导
+        guideHint.style.display = 'none';
+      }
+    }
+
+    // 更新首页气泡数据
     var bubbleStudent = document.querySelector('.home-bubble--blue .home-bubble-num');
     var bubbleAvg = document.querySelector('.home-bubble--green .home-bubble-num');
     var bubbleWrong = document.querySelector('.home-bubble--orange .home-bubble-num');
     var bubbleWeak = document.querySelector('.home-bubble--purple .home-bubble-num');
+    // 班级人数：有学生就显示真实数量
     if (bubbleStudent) bubbleStudent.innerHTML = getDashboardStudentCount() + '<span class="unit">人</span>';
-    if (bubbleAvg) bubbleAvg.innerHTML = getDashboardAverageScore().toFixed(1) + '<span class="unit">分</span>';
-    if (bubbleWrong) bubbleWrong.innerHTML = getDashboardWrongQuestionCount() + '<span class="unit">题</span>';
-    if (bubbleWeak) bubbleWeak.innerHTML = getDashboardWeakKnowledgeCount() + '<span class="unit">个</span>';
+    // 平均分、错题、知识点：必须有学生且有试卷分析才显示真实值，否则显示0
+    if (bubbleAvg) bubbleAvg.innerHTML = (hasStudents && hasAnalysis ? getDashboardAverageScore().toFixed(1) : '0.0') + '<span class="unit">分</span>';
+    if (bubbleWrong) bubbleWrong.innerHTML = (hasStudents && hasAnalysis ? getDashboardWrongQuestionCount() : 0) + '<span class="unit">题</span>';
+    if (bubbleWeak) bubbleWeak.innerHTML = (hasStudents && hasAnalysis ? getDashboardWeakKnowledgeCount() : 0) + '<span class="unit">个</span>';
 
     // 更新搜索视图
     updateKnowledgeDropdowns();
@@ -11710,7 +11768,12 @@
     closeFeature();
     renderStudentList();
     updateUI();
-    showToast('已添加并保存到账号：' + name + '（' + classVal + '）', 'success');
+    // 根据是否已有试卷分析给出不同引导
+    if (state.questions.length === 0) {
+      showToast('已添加学生：' + name + '。下一步请上传试卷进行分析，学情看板将展示完整数据', 'success', 4000);
+    } else {
+      showToast('已添加学生：' + name + '。学情看板已更新', 'success', 3000);
+    }
   }
 
   /**
@@ -11741,8 +11804,8 @@
         <div class="empty-state">
           <div class="empty-state-icon"><svg viewBox="0 0 24 24"><path d="M4 7 L12 3 L20 7 L12 11 Z"/><path d="M4 7 L4 17 L12 21 L12 11"/><path d="M20 7 L20 17 L12 21"/></svg></div>
           <div class="empty-state-text">暂无学生数据</div>
-          <div class="empty-state-hint">上传并分析试卷后，学生数据将自动生成</div>
-          <button class="empty-state-btn" onclick="switchView('home')">去上传试卷</button>
+          <div class="empty-state-hint">点击下方按钮添加学生信息，添加后上传试卷分析即可查看学情看板</div>
+          <button class="empty-state-btn" onclick="openAddStudent()">+ 添加学生</button>
         </div>
       `;
       return;
@@ -11792,28 +11855,10 @@
    * 渲染首页两个图表：分数段分布 + 班级平均分趋势
    */
   function renderHomeCharts() {
-    var emptyState = document.getElementById('homeEmptyState');
-    var bubbles = document.getElementById('homeBubbles');
-    var chartLayers = document.querySelectorAll('.home-charts');
+    // 学情看板元素始终保留，只是数据为空时显示0或提示
+    // 不隐藏任何元素，保持页面结构完整
 
-    // 没有学生数据时，显示空状态，隐藏气泡和图表
-    if (DEMO_STUDENTS.length === 0) {
-      if (emptyState) emptyState.style.display = 'flex';
-      if (bubbles) bubbles.style.display = 'none';
-      chartLayers.forEach(function(el) { el.style.display = 'none'; });
-      // 销毁已有图表实例
-      if (state.charts.homeScore) { state.charts.homeScore.dispose(); state.charts.homeScore = null; }
-      if (state.charts.homeTrend) { state.charts.homeTrend.dispose(); state.charts.homeTrend = null; }
-      if (state.charts.homeError) { state.charts.homeError.dispose(); state.charts.homeError = null; }
-      if (state.charts.homeRadar) { state.charts.homeRadar.dispose(); state.charts.homeRadar = null; }
-      return;
-    }
-
-    // 有学生数据时，隐藏空状态，显示气泡和图表
-    if (emptyState) emptyState.style.display = 'none';
-    if (bubbles) bubbles.style.display = '';
-    chartLayers.forEach(function(el) { el.style.display = ''; });
-
+    // 更新气泡数据（updateUI 中已调用，这里确保图表同步）
     renderHomeScoreChart();
     renderHomeTrendChart();
     renderHomeErrorChart();
@@ -11830,6 +11875,17 @@
 
     // 销毁旧实例
     if (state.charts.homeScore) state.charts.homeScore.dispose();
+
+    // 无学生数据时显示空状态
+    if (DEMO_STUDENTS.length === 0) {
+      el.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#94A3B8;font-size:14px;"><svg viewBox="0 0 24 24" style="width:36px;height:36px;fill:none;stroke:#CBD5E1;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;margin-bottom:8px;"><rect x="3" y="12" width="4" height="9" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="17" y="4" width="4" height="17" rx="1"/></svg>暂无数据，请先添加学生</div>';
+      return;
+    }
+    // 有学生但无试卷分析
+    if (state.questions.length === 0) {
+      el.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#94A3B8;font-size:14px;"><svg viewBox="0 0 24 24" style="width:36px;height:36px;fill:none;stroke:#CBD5E1;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;margin-bottom:8px;"><rect x="3" y="12" width="4" height="9" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="17" y="4" width="4" height="17" rx="1"/></svg>暂无数据，请先上传试卷分析</div>';
+      return;
+    }
 
     var chart = echarts.init(el);
     state.charts.homeScore = chart;
@@ -11912,6 +11968,17 @@
     // 销毁旧实例
     if (state.charts.homeTrend) state.charts.homeTrend.dispose();
 
+    // 无学生数据时显示空状态
+    if (DEMO_STUDENTS.length === 0) {
+      el.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#94A3B8;font-size:14px;"><svg viewBox="0 0 24 24" style="width:36px;height:36px;fill:none;stroke:#CBD5E1;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;margin-bottom:8px;"><polyline points="3,17 8,12 13,15 21,6"/><circle cx="8" cy="12" r="1.5"/><circle cx="13" cy="15" r="1.5"/><circle cx="21" cy="6" r="1.5"/></svg>暂无数据，请先添加学生</div>';
+      return;
+    }
+    // 有学生但无试卷分析
+    if (state.questions.length === 0) {
+      el.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#94A3B8;font-size:14px;"><svg viewBox="0 0 24 24" style="width:36px;height:36px;fill:none;stroke:#CBD5E1;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;margin-bottom:8px;"><polyline points="3,17 8,12 13,15 21,6"/><circle cx="8" cy="12" r="1.5"/><circle cx="13" cy="15" r="1.5"/><circle cx="21" cy="6" r="1.5"/></svg>暂无数据，请先上传试卷分析</div>';
+      return;
+    }
+
     var chart = echarts.init(el);
     state.charts.homeTrend = chart;
 
@@ -11920,7 +11987,7 @@
 
     // 只有有学生数据时才生成趋势
     var trendData;
-    if (DEMO_STUDENTS.length > 0) {
+    if (DEMO_STUDENTS.length > 0 && state.questions.length > 0) {
       trendData = [
         Math.max(0, Math.round((currentAvg - 6) * 10) / 10),
         Math.max(0, Math.round((currentAvg - 3) * 10) / 10),
@@ -12034,8 +12101,12 @@
     if (state.charts.homeError) state.charts.homeError.dispose();
 
     // 必须有学生数据才统计错题
-    if (DEMO_STUDENTS.length === 0 || state.questions.length === 0) {
-      el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#94A3B8;font-size:14px;">暂无错题数据</div>';
+    if (DEMO_STUDENTS.length === 0) {
+      el.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#94A3B8;font-size:14px;"><svg viewBox="0 0 24 24" style="width:36px;height:36px;fill:none;stroke:#CBD5E1;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;margin-bottom:8px;"><path d="M12 3 L12 14"/><circle cx="12" cy="18" r="2"/><path d="M5 8 Q5 5 8 5 L16 5 Q19 5 19 8 L19 14 L21 17 L3 17 L5 14 Z"/></svg>暂无数据，请先添加学生</div>';
+      return;
+    }
+    if (state.questions.length === 0) {
+      el.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#94A3B8;font-size:14px;"><svg viewBox="0 0 24 24" style="width:36px;height:36px;fill:none;stroke:#CBD5E1;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;margin-bottom:8px;"><path d="M5 3 L13 3 L17 7 L17 17 L5 17 Z" fill="none"/><line x1="8" y1="10" x2="14" y2="10"/><line x1="8" y1="13" x2="12" y2="13"/></svg>暂无错题数据，请先上传试卷分析</div>';
       return;
     }
 
@@ -12162,12 +12233,23 @@
     // 销毁旧实例
     if (state.charts.homeRadar) state.charts.homeRadar.dispose();
 
+    // 无学生数据
+    if (DEMO_STUDENTS.length === 0) {
+      el.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#94A3B8;font-size:14px;"><svg viewBox="0 0 24 24" style="width:36px;height:36px;fill:none;stroke:#CBD5E1;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;margin-bottom:8px;"><polygon points="12,3 21,9 18,20 6,20 3,9"/><line x1="12" y1="3" x2="12" y2="20"/><line x1="3" y1="9" x2="21" y2="9"/></svg>暂无数据，请先添加学生</div>';
+      return;
+    }
+    // 有学生但无试卷分析
+    if (state.questions.length === 0) {
+      el.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#94A3B8;font-size:14px;"><svg viewBox="0 0 24 24" style="width:36px;height:36px;fill:none;stroke:#CBD5E1;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;margin-bottom:8px;"><polygon points="12,3 21,9 18,20 6,20 3,9"/><line x1="12" y1="3" x2="12" y2="20"/><line x1="3" y1="9" x2="21" y2="9"/></svg>暂无数据，请先上传试卷分析</div>';
+      return;
+    }
+
     var knowledgeData = getDashboardKnowledgeAverages();
     var kpNames = knowledgeData.names;
     var kpRates = knowledgeData.rates;
 
     if (kpNames.length === 0) {
-      el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#94A3B8;font-size:14px;">暂无知识点数据</div>';
+      el.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#94A3B8;font-size:14px;"><svg viewBox="0 0 24 24" style="width:36px;height:36px;fill:none;stroke:#CBD5E1;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;margin-bottom:8px;"><polygon points="12,3 21,9 18,20 6,20 3,9"/><line x1="12" y1="3" x2="12" y2="20"/><line x1="3" y1="9" x2="21" y2="9"/></svg>暂无知识点数据</div>';
       return;
     }
 
