@@ -13,6 +13,8 @@
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <!-- pdf.js PDF解析库 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <!-- SheetJS Excel解析库 -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script>
     // 设置 pdf.js 的 worker 路径
     if (window['pdfjsLib']) {
@@ -1471,6 +1473,15 @@
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
     }
+    .students-action-btn--green {
+      background: var(--color-success);
+      color: var(--color-text-white);
+    }
+    .students-action-btn--green:hover {
+      background: #059669;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
 
     .view-students {
       padding-top: 0;
@@ -1952,6 +1963,74 @@
     .question-card:hover {
       border-color: var(--color-primary);
       transform: translateY(-1px);
+    }
+
+    /* ===== 题目卡片放大弹窗 ===== */
+    .question-modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 9999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.2s ease;
+    }
+    .question-modal-overlay.show { display: flex; }
+    .question-modal {
+      background: var(--color-bg-white);
+      border-radius: 16px;
+      max-width: 700px;
+      width: 90%;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 32px;
+      position: relative;
+      animation: slideUp 0.3s ease;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    }
+    .question-modal-close {
+      position: absolute;
+      top: 16px; right: 16px;
+      width: 36px; height: 36px;
+      border: none;
+      background: var(--color-bg);
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      color: var(--color-text-muted);
+      transition: all var(--transition-fast);
+    }
+    .question-modal-close:hover {
+      background: var(--color-error-light);
+      color: var(--color-error);
+    }
+    .question-modal-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--color-text-title);
+      margin-bottom: 16px;
+      padding-right: 40px;
+    }
+    .question-modal-body {
+      font-size: 16px;
+      line-height: 1.8;
+      color: var(--color-text-body);
+    }
+    .question-modal-body strong {
+      color: var(--color-text-title);
+    }
+    .question-modal-section {
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--color-border-light);
+    }
+    .question-modal-section:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
     }
 
     .question-card-header {
@@ -5337,6 +5416,13 @@
             </svg>
             筛选
           </button>
+          <button class="students-action-btn students-action-btn--green" onclick="openBatchImport()">
+            <svg viewBox="0 0 20 20">
+              <path d="M3 17 L3 13 L13 3 L17 7 L7 17 Z"/>
+              <path d="M10 6 L14 10"/>
+            </svg>
+            批量导入
+          </button>
           <button class="students-action-btn students-action-btn--blue" onclick="openAddStudent()">
             <svg viewBox="0 0 20 20">
               <circle cx="8" cy="7" r="3"/>
@@ -5345,6 +5431,13 @@
               <line x1="12" y1="12" x2="18" y2="12"/>
             </svg>
             添加学生
+          </button>
+          <button class="students-action-btn students-action-btn--white" onclick="openStudentManagePanel()" title="数据管理">
+            <svg viewBox="0 0 20 20" style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.5;">
+              <circle cx="10" cy="10" r="2"/>
+              <path d="M10 2 L10 4 M10 16 L10 18 M2 10 L4 10 M16 10 L18 10 M4.5 4.5 L6 6 M14 14 L15.5 15.5 M15.5 4.5 L14 6 M6 14 L4.5 15.5"/>
+            </svg>
+            管理
           </button>
         </div>
       </div>
@@ -6248,17 +6341,31 @@
       totalScore += Math.round((q.score || 0) * (q.scoreRate || 0) / 100);
       var rate = q.scoreRate || 0;
       if (rate === 0) { unansweredCount++; }
-      else if (rate >= 60) { correctCount++; }
+      else if (rate >= 80) { correctCount++; }
       else { wrongCount++; }
     });
-    var avgRate = questions.length > 0 ? Math.round(questions.reduce(function(s, q) { return s + (q.scoreRate || 0); }, 0) / questions.length) : 0;
+    // 正确率 = (实际得分 / 卷面总分) * 100%，精确到小数点后1位
+    var avgRate = totalMax > 0 ? Math.round((totalScore / totalMax) * 1000) / 10 : 0;
+
+    // 顶部显著位置展示总得分与总正确率
+    body += '<div class="grade-top-banner" style="background:linear-gradient(135deg,#2563EB,#1D4ED8);color:#fff;border-radius:12px;padding:20px 28px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;">';
+    body += '<div style="text-align:center;flex:1;">';
+    body += '<div style="font-size:14px;opacity:0.85;margin-bottom:4px;">总得分</div>';
+    body += '<div style="font-size:36px;font-weight:800;">' + totalScore + ' <span style="font-size:18px;opacity:0.7;">/ ' + totalMax + '</span></div>';
+    body += '</div>';
+    body += '<div style="width:1px;height:48px;background:rgba(255,255,255,0.3);margin:0 24px;"></div>';
+    body += '<div style="text-align:center;flex:1;">';
+    body += '<div style="font-size:14px;opacity:0.85;margin-bottom:4px;">总正确率</div>';
+    body += '<div style="font-size:36px;font-weight:800;">' + avgRate.toFixed(1) + '%</div>';
+    body += '</div>';
+    body += '</div>';
 
     body += '<div class="grade-summary">';
     body += '<div class="grade-summary-card"><div class="grade-summary-value">' + totalScore + '</div><div class="grade-summary-label">总得分 / ' + totalMax + '</div></div>';
     body += '<div class="grade-summary-card"><div class="grade-summary-value">' + correctCount + '</div><div class="grade-summary-label">批改正确</div></div>';
     body += '<div class="grade-summary-card"><div class="grade-summary-value" style="color:#EF4444;">' + wrongCount + '</div><div class="grade-summary-label">批改错误</div></div>';
     body += '<div class="grade-summary-card"><div class="grade-summary-value" style="color:#F59E0B;">' + unansweredCount + '</div><div class="grade-summary-label">未作答</div></div>';
-    body += '<div class="grade-summary-card"><div class="grade-summary-value" style="color:#10B981;">' + avgRate + '%</div><div class="grade-summary-label">平均得分率</div></div>';
+    body += '<div class="grade-summary-card"><div class="grade-summary-value" style="color:#10B981;">' + avgRate.toFixed(1) + '%</div><div class="grade-summary-label">总正确率</div></div>';
     body += '</div>';
 
     // 题目表格
@@ -6270,8 +6377,8 @@
       var earnedScore = Math.round((q.score || 0) * (q.scoreRate || 0) / 100);
       var rate = q.scoreRate || 0;
       var rateColor = rate >= 80 ? '#10B981' : (rate >= 60 ? '#F59E0B' : '#EF4444');
-      var statusClass = rate >= 60 ? 'correct' : (rate === 0 ? 'pending' : 'wrong');
-      var statusText = rate >= 60 ? '正确' : (rate === 0 ? '未作答' : '错误');
+      var statusClass = rate >= 80 ? 'correct' : (rate === 0 ? 'pending' : 'wrong');
+      var statusText = rate >= 80 ? '正确' : (rate === 0 ? '未作答' : '错误');
       var kpText = (q.knowledgePoints || ['未分类']).join('、');
 
       body += '<tr id="gradeRow-' + i + '">';
@@ -6388,10 +6495,16 @@
       );
 
       if (gradedQuestions.length > 0) {
+        // 标记为已批改
+        gradedQuestions.forEach(function(q) { q.graded = true; });
         // 更新题库中的得分率
         state.questions = gradedQuestions;
+        state.filteredQuestions = gradedQuestions.slice();
         saveQuestions();
         updateUI();
+
+        // 强制重新渲染批改结果面板，确保数据正确显示
+        openAutoGrade({ skipAutoRun: true });
 
         // 等待逐题动画完成后才隐藏进度条
         await animateGradeResults(gradedQuestions, btn);
@@ -6493,10 +6606,11 @@
             totalScore += earned;
             var rate = q.scoreRate || 0;
             if (rate === 0) { unansweredCount++; }
-            else if (rate >= 60) { correctCount++; }
+            else if (rate >= 80) { correctCount++; }
             else { wrongCount++; }
           });
-          var avgRate = questions.length > 0 ? Math.round(questions.reduce(function(s, q) { return s + (q.scoreRate || 0); }, 0) / questions.length) : 0;
+          // 正确率 = (实际得分 / 卷面总分) * 100%
+          var avgRate = totalMax > 0 ? Math.round((totalScore / totalMax) * 1000) / 10 : 0;
 
           // 更新顶部统计
           var summaryCards = document.querySelectorAll('.grade-summary-card');
@@ -6506,10 +6620,21 @@
             summaryCards[1].querySelector('.grade-summary-value').textContent = correctCount;
             summaryCards[2].querySelector('.grade-summary-value').textContent = wrongCount;
             summaryCards[3].querySelector('.grade-summary-value').textContent = unansweredCount;
-            summaryCards[4].querySelector('.grade-summary-value').textContent = avgRate + '%';
+            summaryCards[4].querySelector('.grade-summary-value').textContent = avgRate.toFixed(1) + '%';
+            summaryCards[4].querySelector('.grade-summary-label').textContent = '总正确率';
           }
 
-          showToast('批改完成！正确 ' + correctCount + ' 题，错误 ' + wrongCount + ' 题', 'success', 4000);
+          // 更新顶部横幅
+          var topBanner = document.querySelector('.grade-top-banner');
+          if (topBanner) {
+            var bannerValues = topBanner.querySelectorAll('div[style*="font-size:36px"]');
+            if (bannerValues.length >= 2) {
+              bannerValues[0].innerHTML = totalScore + ' <span style="font-size:18px;opacity:0.7;">/ ' + totalMax + '</span>';
+              bannerValues[1].textContent = avgRate.toFixed(1) + '%';
+            }
+          }
+
+          showToast('批改完成！正确 ' + correctCount + ' 题，错误 ' + wrongCount + ' 题，总正确率 ' + avgRate.toFixed(1) + '%', 'success', 4000);
           resolve();
           return;
         }
@@ -6518,8 +6643,8 @@
       var earnedScore = Math.round((q.score || 0) * (q.scoreRate || 0) / 100);
       var rate = q.scoreRate || 0;
       var rateColor = rate >= 80 ? '#10B981' : (rate >= 60 ? '#F59E0B' : '#EF4444');
-      var statusClass = rate >= 60 ? 'correct' : (rate === 0 ? 'pending' : 'wrong');
-      var statusText = rate >= 60 ? '正确' : (rate === 0 ? '未作答' : '错误');
+      var statusClass = rate >= 80 ? 'correct' : (rate === 0 ? 'pending' : 'wrong');
+      var statusText = rate >= 80 ? '正确' : (rate === 0 ? '未作答' : '错误');
 
       var scoreCell = $('#gradeScore-' + i);
       var barCell = $('#gradeBar-' + i);
@@ -6575,7 +6700,9 @@
       report += '第' + (i + 1) + '题 [' + (q.type || '') + '] ' + (q.knowledgePoints || []).join('、') + '\n';
       report += '  满分：' + (q.score || 0) + ' 得分：' + earnedScore + ' 得分率：' + (q.scoreRate || 0) + '%\n';
     });
+    var avgRate = totalMax > 0 ? Math.round((totalScore / totalMax) * 1000) / 10 : 0;
     report += '\n总分：' + totalScore + ' / ' + totalMax + '\n';
+    report += '总正确率：' + avgRate.toFixed(1) + '%\n';
 
     var blob = new Blob([report], { type: 'text/plain;charset=utf-8' });
     var a = document.createElement('a');
@@ -6623,6 +6750,39 @@
       body += '</div>';
       body += '</div>';
 
+      // 错误类型统计（粗心 vs 能力短板）
+      var errorTypeMap = { '计算失误': 0, '审题遗漏': 0, '概念混淆': 0, '逻辑中断': 0, '理解偏差': 0, '表达匮乏': 0, '未分类': 0 };
+      errorQuestions.forEach(function(q) {
+        var fb = q.feedback || '';
+        var matched = false;
+        Object.keys(errorTypeMap).forEach(function(et) {
+          if (et !== '未分类' && fb.indexOf(et) !== -1) { errorTypeMap[et]++; matched = true; }
+        });
+        if (!matched) errorTypeMap['未分类']++;
+      });
+      var carelessCount = errorTypeMap['计算失误'] + errorTypeMap['审题遗漏'];
+      var abilityCount = errorTypeMap['概念混淆'] + errorTypeMap['逻辑中断'] + errorTypeMap['理解偏差'] + errorTypeMap['表达匮乏'];
+      var totalTagged = carelessCount + abilityCount;
+      var carelessPct = totalTagged > 0 ? Math.round(carelessCount / totalTagged * 100) : 0;
+      var abilityPct = totalTagged > 0 ? 100 - carelessPct : 0;
+
+      body += '<div style="background:var(--color-bg);border-radius:12px;padding:16px;margin-bottom:16px;">';
+      body += '<div style="font-size:14px;font-weight:700;color:var(--color-text-title);margin-bottom:12px;">错误归因分析</div>';
+      body += '<div style="display:flex;gap:16px;align-items:center;">';
+      body += '<div style="flex:1;text-align:center;"><div style="font-size:28px;font-weight:800;color:#F59E0B;">' + carelessPct + '%</div><div style="font-size:12px;color:var(--color-text-muted);">粗心占比</div></div>';
+      body += '<div style="width:200px;height:24px;background:var(--color-border);border-radius:12px;overflow:hidden;display:flex;"><div style="width:' + carelessPct + '%;background:#F59E0B;transition:width 0.5s;"></div><div style="width:' + abilityPct + '%;background:#EF4444;transition:width 0.5s;"></div></div>';
+      body += '<div style="flex:1;text-align:center;"><div style="font-size:28px;font-weight:800;color:#EF4444;">' + abilityPct + '%</div><div style="font-size:12px;color:var(--color-text-muted);">能力短板占比</div></div>';
+      body += '</div>';
+      // 详细错误类型标签
+      body += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;">';
+      Object.keys(errorTypeMap).forEach(function(et) {
+        if (errorTypeMap[et] > 0) {
+          var color = (et === '计算失误' || et === '审题遗漏') ? '#F59E0B' : '#EF4444';
+          body += '<span style="padding:4px 12px;border-radius:12px;font-size:12px;font-weight:600;background:' + color + '20;color:' + color + ';">' + et + ' ' + errorTypeMap[et] + '题</span>';
+        }
+      });
+      body += '</div></div>';
+
       sortedKps.forEach(function(kp) {
         var qs = groups[kp];
         var avgRate = Math.round(qs.reduce(function(s, q) { return s + (q.scoreRate || 0); }, 0) / qs.length);
@@ -6645,6 +6805,14 @@
           body += '<span>满分：' + (q.score || 0) + '分</span>';
           body += '<span>·</span>';
           body += '<span style="color:#EF4444;">得分率：' + (q.scoreRate || 0) + '%</span>';
+          // 错误类型标签
+          var fb = q.feedback || '';
+          var errorTypes = ['计算失误', '审题遗漏', '概念混淆', '逻辑中断', '理解偏差', '表达匮乏'];
+          var matchedType = errorTypes.find(function(et) { return fb.indexOf(et) !== -1; });
+          if (matchedType) {
+            var tagColor = (matchedType === '计算失误' || matchedType === '审题遗漏') ? '#F59E0B' : '#EF4444';
+            body += '<span>·</span><span style="padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;background:' + tagColor + '20;color:' + tagColor + ';">' + matchedType + '</span>';
+          }
           body += '</div>';
           body += '<div class="error-question-answer"><b>正确答案：</b>' + (q.answer || '暂无答案') + '</div>';
           body += '</div>';
@@ -9804,7 +9972,8 @@
                         (q.knowledgePoints ? [q.knowledgePoints] : ['未分类']),
       difficulty: q.difficulty || '中等',
       score: q.score || q.fullScore || 5,
-      scoreRate: q.scoreRate !== undefined ? q.scoreRate : (q.rate !== undefined ? q.rate : 60),
+      scoreRate: q.scoreRate !== undefined ? q.scoreRate : (q.rate !== undefined ? q.rate : 0),
+      graded: q.graded === true || q.scoreRate !== undefined || q.rate !== undefined,
       question: q.question || q.content || q.text || '未知题目',
       answer: q.answer || q.analysis || '',
       studentAnswer: q.studentAnswer || '',
@@ -10271,9 +10440,9 @@
         </div>
       `;
 
-      // 点击展开/收起
+      // 点击打开放大弹窗
       card.addEventListener('click', () => {
-        card.classList.toggle('expanded');
+        openQuestionModal(q);
       });
 
       container.appendChild(card);
@@ -10281,8 +10450,47 @@
   }
 
   /**
-   * 更新统计数字
+   * 打开题目放大弹窗
    */
+  function openQuestionModal(q) {
+    var overlay = document.getElementById('questionModalOverlay');
+    if (!overlay) return;
+    var typeColor = TYPE_COLORS[q.type] || TYPE_COLORS['其他'];
+    var diffColor = DIFFICULTY_COLORS[q.difficulty] || DIFFICULTY_COLORS['中等'];
+    var kpTags = (q.knowledgePoints || []).map(function(kp) {
+      return '<span class="question-kp-tag">' + kp + '</span>';
+    }).join(' ');
+    var html = '';
+    html += '<div class="question-modal-title">题目详情</div>';
+    html += '<div class="question-modal-section">';
+    html += '<span class="question-type-tag" style="background:' + typeColor.bg + ';color:' + typeColor.text + ';">' + (q.type || '未知') + '</span> ';
+    html += '<span class="question-kp-tag" style="background:' + diffColor.bg + ';color:' + diffColor.text + ';">' + (q.difficulty || '中等') + '</span> ';
+    html += '<span class="question-score">分值：<strong>' + (q.score || 0) + '</strong>分</span>';
+    if (kpTags) html += '<br><br>' + kpTags;
+    html += '</div>';
+    html += '<div class="question-modal-section"><strong>题干：</strong><br>' + (q.question || '未知题目') + '</div>';
+    if (q.answer) {
+      html += '<div class="question-modal-section"><strong>参考答案：</strong><br>' + q.answer.replace(/\n/g, '<br>') + '</div>';
+    }
+    if (q.studentAnswer) {
+      html += '<div class="question-modal-section"><strong>学生答案：</strong><br>' + q.studentAnswer.replace(/\n/g, '<br>') + '</div>';
+    }
+    if (q.feedback) {
+      html += '<div class="question-modal-section"><strong>批改评语：</strong><br>' + q.feedback + '</div>';
+    }
+    if (q.graded || q.scoreRate !== undefined) {
+      var rate = q.scoreRate || 0;
+      var rateColor = rate >= 80 ? '#10B981' : (rate >= 60 ? '#F59E0B' : '#EF4444');
+      html += '<div class="question-modal-section"><strong>得分率：</strong><span style="color:' + rateColor + ';font-weight:700;font-size:18px;">' + rate + '%</span></div>';
+    }
+    overlay.querySelector('.question-modal').innerHTML = '<button class="question-modal-close" onclick="closeQuestionModal()">&times;</button>' + html;
+    overlay.classList.add('show');
+  }
+
+  function closeQuestionModal() {
+    var overlay = document.getElementById('questionModalOverlay');
+    if (overlay) overlay.classList.remove('show');
+  }
   function updateStats() {
     $('#filterResultCount').textContent = state.filteredQuestions.length;
     $('#totalQuestionCount').textContent = state.questions.length;
@@ -11714,7 +11922,10 @@
     studentFilterState.class = '';
     studentFilterState.scoreRange = '';
     studentFilterState.kp = '';
-    openStudentFilter();
+    // 立即关闭弹窗并重新渲染列表，确保清除筛选后恢复全量显示
+    closeFeature();
+    renderStudentList();
+    showToast('已清除所有筛选，显示全部学生', 'info');
   }
 
   /**
@@ -11898,8 +12109,316 @@
   }
 
   /**
-   * 渲染学生列表（支持筛选）
+   * 打开批量导入学生弹窗
    */
+  function openBatchImport() {
+    var body = '';
+    body += '<div style="font-size:14px;color:var(--color-text-muted);margin-bottom:20px;">上传Excel表格批量导入学生，支持 .xlsx 格式</div>';
+    body += '<div style="background:var(--color-primary-lighter);border:1px dashed var(--color-primary);border-radius:12px;padding:32px;text-align:center;cursor:pointer;margin-bottom:20px;" id="batchDropZone" onclick="document.getElementById(\'batchFileInput\').click()">';
+    body += '<svg viewBox="0 0 24 24" style="width:48px;height:48px;fill:none;stroke:var(--color-primary);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;margin-bottom:12px;"><path d="M12 3 L12 15 M7 8 L12 3 L17 8"/><path d="M3 18 L3 21 L21 21 L21 18"/></svg>';
+    body += '<div style="font-size:16px;font-weight:600;color:var(--color-primary);margin-bottom:4px;">点击选择Excel文件</div>';
+    body += '<div style="font-size:13px;color:var(--color-text-muted);">支持 .xlsx 格式，表头需包含：姓名、学号、班级</div>';
+    body += '</div>';
+    body += '<input type="file" id="batchFileInput" accept=".xlsx,.xls" style="display:none;" onchange="handleBatchFile(event)">';
+    body += '<div id="batchPreview" style="display:none;"></div>';
+    body += '<div id="batchActions" style="display:none;margin-top:16px;display:flex;gap:12px;justify-content:flex-end;">';
+    body += '<button class="feat-btn feat-btn--ghost" onclick="openBatchImport()">重新选择</button>';
+    body += '<button class="feat-btn feat-btn--primary" id="batchConfirmBtn" onclick="confirmBatchImport()">确认导入</button>';
+    body += '</div>';
+    body += '<div style="margin-top:20px;padding:16px;background:var(--color-bg);border-radius:8px;">';
+    body += '<div style="font-size:13px;font-weight:600;color:var(--color-text-title);margin-bottom:8px;">模板格式说明</div>';
+    body += '<div style="font-size:12px;color:var(--color-text-muted);line-height:1.6;">';
+    body += 'Excel表头需包含以下列（顺序不限）：<br>';
+    body += '· <strong>姓名</strong>（必填）<br>';
+    body += '· <strong>学号</strong>（必填）<br>';
+    body += '· <strong>班级</strong>（必填）<br>';
+    body += '· 平均得分率（选填，0-100）<br>';
+    body += '系统会自动校验学号是否重复';
+    body += '</div></div>';
+    openFeature(
+      '<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><path d="M3 17 L3 13 L13 3 L17 7 L7 17 Z"/><path d="M10 6 L14 10"/></svg>批量导入学生',
+      body
+    );
+  }
+
+  var batchImportData = [];
+
+  function handleBatchFile(event) {
+    var file = event.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        var data = new Uint8Array(e.target.result);
+        var workbook = XLSX.read(data, { type: 'array' });
+        var sheet = workbook.Sheets[workbook.SheetNames[0]];
+        var rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+        if (rows.length === 0) {
+          showToast('Excel文件中没有数据', 'warning');
+          return;
+        }
+        // 解析并校验数据
+        batchImportData = [];
+        var duplicates = [];
+        var existingIds = DEMO_STUDENTS.map(function(s) { return s.id; });
+        rows.forEach(function(row, idx) {
+          var name = String(row['姓名'] || row['name'] || '').trim();
+          var id = String(row['学号'] || row['id'] || row['student_no'] || '').trim();
+          var className = String(row['班级'] || row['class'] || '').trim();
+          var avgRate = parseFloat(row['平均得分率'] || row['avgRate'] || 0) || 0;
+          if (!name || !id) return;
+          if (existingIds.indexOf(id) !== -1 || batchImportData.some(function(s) { return s.id === id; })) {
+            duplicates.push(id);
+            return;
+          }
+          batchImportData.push({ name: name, id: id, class: className || '默认班级', avgRate: Math.max(0, Math.min(100, avgRate)), totalQuestions: 0, kpData: {} });
+        });
+        // 显示预览
+        var preview = document.getElementById('batchPreview');
+        var actions = document.getElementById('batchActions');
+        if (batchImportData.length > 0) {
+          var html = '<div style="font-size:14px;font-weight:600;color:var(--color-text-title);margin-bottom:12px;">预览（共 ' + batchImportData.length + ' 名学生）</div>';
+          html += '<div style="max-height:300px;overflow-y:auto;border:1px solid var(--color-border);border-radius:8px;">';
+          html += '<table style="width:100%;font-size:13px;border-collapse:collapse;"><thead><tr style="background:var(--color-bg);"><th style="padding:8px;text-align:left;border-bottom:1px solid var(--color-border);">姓名</th><th style="padding:8px;text-align:left;border-bottom:1px solid var(--color-border);">学号</th><th style="padding:8px;text-align:left;border-bottom:1px solid var(--color-border);">班级</th></tr></thead><tbody>';
+          batchImportData.forEach(function(s) {
+            html += '<tr><td style="padding:8px;border-bottom:1px solid var(--color-border-light);">' + s.name + '</td><td style="padding:8px;border-bottom:1px solid var(--color-border-light);">' + s.id + '</td><td style="padding:8px;border-bottom:1px solid var(--color-border-light);">' + s.class + '</td></tr>';
+          });
+          html += '</tbody></table></div>';
+          if (duplicates.length > 0) {
+            html += '<div style="margin-top:8px;font-size:12px;color:var(--color-warning);">已跳过 ' + duplicates.length + ' 个重复学号：' + duplicates.join(', ') + '</div>';
+          }
+          preview.innerHTML = html;
+          preview.style.display = 'block';
+          actions.style.display = 'flex';
+        } else {
+          preview.innerHTML = '<div style="text-align:center;padding:20px;color:var(--color-error);">未找到有效数据，请检查Excel格式</div>';
+          preview.style.display = 'block';
+          actions.style.display = 'none';
+        }
+      } catch (err) {
+        showToast('解析Excel失败：' + err.message, 'error', 5000);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  async function confirmBatchImport() {
+    if (!state.user || !state.apiAvailable) {
+      showToast('请先登录并连接后端服务', 'warning', 4000);
+      return;
+    }
+    var btn = document.getElementById('batchConfirmBtn');
+    if (btn) { btn.disabled = true; btn.textContent = '导入中...'; }
+    var success = 0, failed = 0;
+    for (var i = 0; i < batchImportData.length; i++) {
+      var s = batchImportData[i];
+      try {
+        var data = await apiFetch('/api/students', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(s),
+        });
+        DEMO_STUDENTS.push(normalizeStudent(data.student || s));
+        success++;
+      } catch (err) {
+        failed++;
+      }
+    }
+    closeFeature();
+    renderStudentList();
+    updateUI();
+    showToast('批量导入完成：成功 ' + success + ' 人' + (failed > 0 ? '，失败 ' + failed + ' 人' : ''), success > 0 ? 'success' : 'error', 4000);
+  }
+
+  /**
+   * 打开学生数据管理面板
+   */
+  function openStudentManagePanel() {
+    var body = '';
+    body += '<div style="font-size:14px;color:var(--color-text-muted);margin-bottom:20px;">管理学生数据：加载测试数据、清空数据、选择性删除</div>';
+
+    // 测试数据管理
+    body += '<div style="background:var(--color-bg);border-radius:12px;padding:20px;margin-bottom:16px;">';
+    body += '<div style="font-size:15px;font-weight:700;color:var(--color-text-title);margin-bottom:8px;">测试数据</div>';
+    body += '<div style="font-size:13px;color:var(--color-text-muted);margin-bottom:12px;">加载30名测试学生样本数据，方便快速体验系统功能</div>';
+    body += '<div style="display:flex;gap:12px;">';
+    body += '<button class="feat-btn feat-btn--primary" onclick="loadTestStudents()" style="flex:1;">加载30名测试学生</button>';
+    body += '</div></div>';
+
+    // 批量操作
+    body += '<div style="background:var(--color-bg);border-radius:12px;padding:20px;margin-bottom:16px;">';
+    body += '<div style="font-size:15px;font-weight:700;color:var(--color-text-title);margin-bottom:8px;">批量操作</div>';
+    body += '<div style="font-size:13px;color:var(--color-text-muted);margin-bottom:12px;">当前共 ' + DEMO_STUDENTS.length + ' 名学生</div>';
+    body += '<div style="display:flex;gap:12px;">';
+    body += '<button class="feat-btn feat-btn--ghost" onclick="openSelectiveDelete()" style="flex:1;">选择性删除</button>';
+    body += '<button class="feat-btn feat-btn--ghost" style="flex:1;color:var(--color-error);border-color:var(--color-error-light);" onclick="confirmClearAllStudents()">清空所有学生</button>';
+    body += '</div></div>';
+
+    openFeature(
+      '<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><circle cx="12" cy="12" r="3"/><path d="M12 1 L12 4 M12 20 L12 23 M4.2 4.2 L6.3 6.3 M17.7 17.7 L19.8 19.8 M1 12 L4 12 M20 12 L23 12 M4.2 19.8 L6.3 17.7 M17.7 6.3 L19.8 4.2"/></svg>数据管理',
+      body
+    );
+  }
+
+  // 30名测试学生数据
+  var TEST_STUDENTS_DATA = [
+    { name: '张明', id: 'T001', class: '八年级三班', avgRate: 92, totalQuestions: 30, kpData: {} },
+    { name: '李华', id: 'T002', class: '八年级三班', avgRate: 85, totalQuestions: 30, kpData: {} },
+    { name: '王芳', id: 'T003', class: '八年级三班', avgRate: 78, totalQuestions: 30, kpData: {} },
+    { name: '刘强', id: 'T004', class: '八年级三班', avgRate: 88, totalQuestions: 30, kpData: {} },
+    { name: '陈静', id: 'T005', class: '八年级三班', avgRate: 95, totalQuestions: 30, kpData: {} },
+    { name: '杨光', id: 'T006', class: '八年级三班', avgRate: 72, totalQuestions: 30, kpData: {} },
+    { name: '赵雪', id: 'T007', class: '八年级三班', avgRate: 81, totalQuestions: 30, kpData: {} },
+    { name: '黄磊', id: 'T008', class: '八年级三班', avgRate: 67, totalQuestions: 30, kpData: {} },
+    { name: '周婷', id: 'T009', class: '八年级三班', avgRate: 90, totalQuestions: 30, kpData: {} },
+    { name: '吴杰', id: 'T010', class: '八年级三班', avgRate: 76, totalQuestions: 30, kpData: {} },
+    { name: '徐丽', id: 'T011', class: '八年级三班', avgRate: 83, totalQuestions: 30, kpData: {} },
+    { name: '孙超', id: 'T012', class: '八年级三班', avgRate: 58, totalQuestions: 30, kpData: {} },
+    { name: '马超', id: 'T013', class: '八年级三班', avgRate: 87, totalQuestions: 30, kpData: {} },
+    { name: '朱琳', id: 'T014', class: '八年级三班', avgRate: 91, totalQuestions: 30, kpData: {} },
+    { name: '胡斌', id: 'T015', class: '八年级三班', avgRate: 74, totalQuestions: 30, kpData: {} },
+    { name: '郭敏', id: 'T016', class: '八年级三班', avgRate: 80, totalQuestions: 30, kpData: {} },
+    { name: '林峰', id: 'T017', class: '八年级三班', avgRate: 65, totalQuestions: 30, kpData: {} },
+    { name: '何娜', id: 'T018', class: '八年级三班', avgRate: 89, totalQuestions: 30, kpData: {} },
+    { name: '高翔', id: 'T019', class: '八年级三班', avgRate: 77, totalQuestions: 30, kpData: {} },
+    { name: '罗静', id: 'T020', class: '八年级三班', avgRate: 84, totalQuestions: 30, kpData: {} },
+    { name: '梁宇', id: 'T021', class: '八年级三班', avgRate: 70, totalQuestions: 30, kpData: {} },
+    { name: '宋佳', id: 'T022', class: '八年级三班', avgRate: 93, totalQuestions: 30, kpData: {} },
+    { name: '谢鹏', id: 'T023', class: '八年级三班', avgRate: 62, totalQuestions: 30, kpData: {} },
+    { name: '韩雪', id: 'T024', class: '八年级三班', avgRate: 86, totalQuestions: 30, kpData: {} },
+    { name: '唐飞', id: 'T025', class: '八年级三班', avgRate: 79, totalQuestions: 30, kpData: {} },
+    { name: '冯丽', id: 'T026', class: '八年级三班', avgRate: 82, totalQuestions: 30, kpData: {} },
+    { name: '邓超', id: 'T027', class: '八年级三班', avgRate: 75, totalQuestions: 30, kpData: {} },
+    { name: '曹颖', id: 'T028', class: '八年级三班', avgRate: 88, totalQuestions: 30, kpData: {} },
+    { name: '彭涛', id: 'T029', class: '八年级三班', avgRate: 68, totalQuestions: 30, kpData: {} },
+    { name: '董洁', id: 'T030', class: '八年级三班', avgRate: 90, totalQuestions: 30, kpData: {} },
+  ];
+
+  async function loadTestStudents() {
+    if (!state.user || !state.apiAvailable) {
+      showToast('请先登录并连接后端服务', 'warning', 4000);
+      return;
+    }
+    var success = 0;
+    for (var i = 0; i < TEST_STUDENTS_DATA.length; i++) {
+      var s = TEST_STUDENTS_DATA[i];
+      // 检查是否已存在
+      if (DEMO_STUDENTS.some(function(e) { return e.id === s.id; })) continue;
+      try {
+        var data = await apiFetch('/api/students', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(s),
+        });
+        DEMO_STUDENTS.push(normalizeStudent(data.student || s));
+        success++;
+      } catch (err) {
+        // 忽略个别失败
+      }
+    }
+    closeFeature();
+    renderStudentList();
+    updateUI();
+    showToast('已加载 ' + success + ' 名测试学生', 'success', 3000);
+  }
+
+  function confirmClearAllStudents() {
+    if (DEMO_STUDENTS.length === 0) {
+      showToast('当前没有学生数据', 'info');
+      return;
+    }
+    if (!confirm('确定要清空所有学生数据吗？此操作不可撤销！')) return;
+    clearAllStudents();
+  }
+
+  async function clearAllStudents() {
+    var students = DEMO_STUDENTS.slice();
+    for (var i = 0; i < students.length; i++) {
+      if (students[i].dbId) {
+        try {
+          await apiFetch('/api/students', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dbId: students[i].dbId }),
+          });
+        } catch (err) { /* 忽略 */ }
+      }
+    }
+    DEMO_STUDENTS = [];
+    closeFeature();
+    renderStudentList();
+    updateUI();
+    showToast('已清空所有学生数据', 'success', 3000);
+  }
+
+  function openSelectiveDelete() {
+    if (DEMO_STUDENTS.length === 0) {
+      showToast('当前没有学生数据', 'info');
+      return;
+    }
+    var body = '';
+    body += '<div style="font-size:14px;color:var(--color-text-muted);margin-bottom:16px;">勾选要删除的学生，点击底部按钮确认</div>';
+    body += '<div id="selectiveDeleteList" style="max-height:400px;overflow-y:auto;">';
+    DEMO_STUDENTS.forEach(function(s, i) {
+      body += '<label style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--color-border);border-radius:8px;margin-bottom:8px;cursor:pointer;">';
+      body += '<input type="checkbox" class="sel-del-checkbox" data-dbid="' + (s.dbId || '') + '" data-idx="' + i + '" style="width:18px;height:18px;">';
+      body += '<span style="flex:1;"><strong>' + s.name + '</strong> · 学号：' + s.id + ' · 班级：' + s.class + '</span>';
+      if (s.avgRate > 0) {
+        body += '<span style="color:' + getScoreRateColor(s.avgRate) + ';font-weight:600;">' + s.avgRate + '%</span>';
+      }
+      body += '</label>';
+    });
+    body += '</div>';
+    body += '<div class="feature-footer" style="border-top:none;padding:20px 0 0;justify-content:space-between;">';
+    body += '<div style="font-size:13px;color:var(--color-text-muted);"><span id="selDelCount">0</span> 名学生已选中</div>';
+    body += '<div style="display:flex;gap:12px;">';
+    body += '<button class="feat-btn feat-btn--ghost" onclick="openStudentManagePanel()">返回</button>';
+    body += '<button class="feat-btn feat-btn--primary" style="background:var(--color-error);" id="confirmSelDelBtn" onclick="confirmSelectiveDelete()">删除选中</button>';
+    body += '</div></div>';
+    openFeature(
+      '<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><path d="M3 6 L21 6 M8 6 L8 4 L16 4 L16 6 M6 6 L7 20 L17 20 L18 6"/></svg>选择性删除',
+      body
+    );
+    // 更新选中计数
+    document.querySelectorAll('.sel-del-checkbox').forEach(function(cb) {
+      cb.addEventListener('change', function() {
+        var count = document.querySelectorAll('.sel-del-checkbox:checked').length;
+        var countEl = document.getElementById('selDelCount');
+        if (countEl) countEl.textContent = count;
+      });
+    });
+  }
+
+  async function confirmSelectiveDelete() {
+    var checked = document.querySelectorAll('.sel-del-checkbox:checked');
+    if (checked.length === 0) {
+      showToast('请先勾选要删除的学生', 'warning');
+      return;
+    }
+    if (!confirm('确定要删除选中的 ' + checked.length + ' 名学生吗？')) return;
+    var btn = document.getElementById('confirmSelDelBtn');
+    if (btn) { btn.disabled = true; btn.textContent = '删除中...'; }
+    for (var i = 0; i < checked.length; i++) {
+      var dbId = checked[i].getAttribute('data-dbid');
+      var idx = parseInt(checked[i].getAttribute('data-idx'));
+      if (dbId) {
+        try {
+          await apiFetch('/api/students', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dbId: dbId }),
+          });
+        } catch (err) { /* 忽略 */ }
+      }
+      // 从本地数组中移除
+      var localIdx = DEMO_STUDENTS.findIndex(function(s) { return s.dbId === dbId; });
+      if (localIdx !== -1) DEMO_STUDENTS.splice(localIdx, 1);
+    }
+    closeFeature();
+    renderStudentList();
+    updateUI();
+    showToast('已删除 ' + checked.length + ' 名学生', 'success', 3000);
+  }
   function renderStudentList() {
     const container = $('#studentList');
     container.innerHTML = '';
@@ -12811,5 +13330,11 @@
   }
 
   </script>
+
+  <!-- 题目卡片放大弹窗 -->
+  <div class="question-modal-overlay" id="questionModalOverlay" onclick="if(event.target===this)closeQuestionModal()">
+    <div class="question-modal"></div>
+  </div>
+
 </body>
 </html>
