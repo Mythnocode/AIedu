@@ -37,6 +37,10 @@ type Question = {
   studentAnswer?: string;
   isCorrect?: boolean;
   feedback?: string;
+  // [新增] 标记是否已批改
+  graded?: boolean;
+  // [新增] 错误类型标签
+  errorType?: string;
 };
 
 type AnalysisResult = {
@@ -786,6 +790,7 @@ async function handleMentalMathOcr(
 
 /**
  * 使用 GPT Vision 识别试卷图片，提取题目内容和学生手写答案
+ * [增强] 新增 LaTeX 公式识别要求
  */
 async function extractPaperContentWithVision(files: File[], env: Env): Promise<string> {
   const parts: string[] = [];
@@ -832,6 +837,10 @@ async function extractPaperContentWithVision(files: File[], env: Env): Promise<s
                     '4. 如果是填空题，识别学生填写的答案',
                     '5. 如果是解答题/计算题，识别学生完整的解答过程',
                     '6. 无论是印刷体还是手写体，都要尽可能准确地识别',
+                    // [新增] LaTeX 公式识别要求
+                    '7. 对于数学公式、化学方程式等，请尝试转换为 LaTeX 格式输出',
+                    '8. 识别上下标（如 x² 写作 x^2）、根号（如 √2 写作 \\sqrt{2}）',
+                    '9. 识别分式（如 1/2 写作 \\frac{1}{2}）、绝对值、向量等特殊符号',
                     '',
                     '输出格式（每道题用如下格式）：',
                     '【题号】第X题',
@@ -874,6 +883,7 @@ async function extractPaperContentWithVision(files: File[], env: Env): Promise<s
 
 /**
  * 使用 DeepSeek 逐题批改学生答案
+ * [增强] 新增思维链(CoT)评判、错误类型标注、分步得分、LaTeX公式支持
  */
 async function gradeWithDeepSeek(recognizedText: string, env: Env): Promise<AnalysisResult> {
   const prompt = [
@@ -892,6 +902,28 @@ async function gradeWithDeepSeek(recognizedText: string, env: Env): Promise<Anal
     '5. 对于解答题/计算题，要考虑解题过程是否完整、方法是否正确',
     '6. 对于选择题/判断题，只有完全选对才给100%，选错给0%',
     '7. 对于填空题，答案完全一致给100%，部分正确给50%',
+    // [新增] 思维链(CoT)评判 - 用于主观题
+    '8. 对于语文阅读理解、简答题等主观题，使用思维链(CoT)评判：',
+    '   a. 先提取学生答案的"观点骨架"（核心论点+论据）',
+    '   b. 与标准答案的语义簇进行比对',
+    '   c. 评判逻辑自洽性，而非仅匹配字面词',
+    '   d. 对于有创见的答案，即使与标准答案不同，也应给予合理分数',
+    // [新增] 分步得分 - 用于计算题
+    '9. 对于计算题/解答题，实行分步得分：',
+    '   a. 识别竖式中的进位、退位标记',
+    '   b. 识别横式中的运算顺序',
+    '   c. 构建分步得分点，每一步赋予权重',
+    '   d. 最终得分率 = 步骤分累加 / 总分',
+    '   e. feedback中标注第一步计算错误的位置',
+    // [新增] 错误类型标注
+    '10. 每道错题必须在errorType字段中标注错误类型（仅以下6种之一）：',
+    '   - "计算失误"：算法正确但计算出错',
+    '   - "审题遗漏"：未看清题目条件',
+    '   - "概念混淆"：知识点理解有误',
+    '   - "逻辑中断"：解题过程不完整',
+    '   - "理解偏差"：语义理解错误（主观题）',
+    '   - "表达匮乏"：理解正确但表达不完整（主观题）',
+    '   完全正确的题目errorType留空',
     '',
     '输出 JSON 对象，包含以下字段：',
     '- summary: 批改总结',
@@ -914,6 +946,7 @@ async function gradeWithDeepSeek(recognizedText: string, env: Env): Promise<Anal
     '  - studentAnswer: 学生写的答案',
     '  - isCorrect: true/false（是否完全正确）',
     '  - feedback: 批改评语',
+    '  - errorType: 错误类型（正确的题目留空，错题从上述6种中选一）',
     '',
     '特别注意：questions数组中的每道题都必须包含scoreRate字段！',
     'scoreRate必须严格基于学生实际作答情况给出，错误就给0，全对就给100，',
@@ -943,7 +976,7 @@ async function gradeWithDeepSeek(recognizedText: string, env: Env): Promise<Anal
         messages: [
           {
             role: 'system',
-            content: '你只输出符合要求的 JSON 对象。批改要严格、客观、准确，基于学生实际作答内容评分。',
+            content: '你只输出符合要求的 JSON 对象。批改要严格、客观、准确，基于学生实际作答内容评分。对于错题必须标注errorType。',
           },
           { role: 'user', content: prompt },
         ],
@@ -967,6 +1000,7 @@ async function gradeWithDeepSeek(recognizedText: string, env: Env): Promise<Anal
 
 /**
  * 更新数据库中题目的得分率
+ * [增强] 同时更新 graded 标记
  */
 async function updateQuestionScores(env: Env, user: AuthUser, questions: Required<Question>[]): Promise<void> {
   // 批改结果直接更新最近一次分析的题目得分率
@@ -977,7 +1011,6 @@ async function updateQuestionScores(env: Env, user: AuthUser, questions: Require
     .all<{ id: string }>();
 
   const existingIds = (recentQuestions.results || []).map((r) => r.id);
-  const now = new Date().toISOString();
 
   for (let i = 0; i < questions.length && i < existingIds.length; i++) {
     const q = questions[i];
@@ -1573,9 +1606,16 @@ function normalizeAnalysis(value: Partial<AnalysisResult>, clearScoreRate = fals
   };
 }
 
+/**
+ * 规范化题目数组
+ * [修复] scoreRate 默认值从 60 改为 0（未批改题目不应有默认得分率）
+ * [新增] graded 标记字段 - 区分已批改和未批改题目
+ * [新增] errorType 错误类型标签字段
+ */
 function normalizeQuestions(questions: Question[]): Required<Question>[] {
   return questions.slice(0, 200).map((question, index) => {
     const score = numberOrDefault(question.score ?? question.fullScore, 5);
+    const hasScoreRate = question.scoreRate !== undefined || question.rate !== undefined;
     return {
       id: question.id || `${Date.now()}-${index}`,
       type: normalizeQuestionType(question.type),
@@ -1583,6 +1623,7 @@ function normalizeQuestions(questions: Question[]): Required<Question>[] {
       difficulty: normalizeDifficulty(question.difficulty),
       score,
       fullScore: score,
+      // [修复] 默认值从 60 改为 0，未批改题目不应有默认得分率
       scoreRate: clamp(numberOrDefault(question.scoreRate ?? question.rate, 0), 0, 100),
       rate: clamp(numberOrDefault(question.scoreRate ?? question.rate, 0), 0, 100),
       question: String(question.question || question.content || question.text || '未识别题目').trim(),
@@ -1592,6 +1633,10 @@ function normalizeQuestions(questions: Question[]): Required<Question>[] {
       analysis: String(question.analysis || question.answer || '').trim(),
       studentAnswer: String(question.studentAnswer || '').trim(),
       isCorrect: question.isCorrect === true,
+      // [新增] 标记是否已批改
+      graded: question.graded === true || hasScoreRate,
+      // [新增] 错误类型标签（6种之一，正确题目为空）
+      errorType: String(question.errorType || '').trim(),
       feedback: String(question.feedback || '').trim(),
     };
   });
